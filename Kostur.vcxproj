@@ -128,6 +128,8 @@
     <ClCompile Include="Source\Util.cpp" />
     <ClCompile Include="Source\Cinema.cpp" />
     <ClCompile Include="Source\Renderer.cpp" />
+    <ClCompile Include="Source\Person.cpp" />
+    <ClCompile Include="Source\Seat.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Header\stb_image.h" />

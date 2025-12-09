@@ -161,7 +161,8 @@ void Cinema::update() {
 void Cinema::handleMouseClick(double x, double y) {
     if (state != CinemaState::RESERVATION) return;
     
-    double glX = (x / windowWidth) * 2.0 - 1.0;
+    float aspect = (float)windowWidth / (float)windowHeight;
+    double glX = ((x / windowWidth) * 2.0 - 1.0) * aspect;
     double glY = 1.0 - (y / windowHeight) * 2.0;
     
     Seat* seat = findSeatAtPosition(glX, glY);
@@ -182,10 +183,10 @@ void Cinema::handleKeyPress(int key) {
 }
 
 Seat* Cinema::findSeatAtPosition(double x, double y) {
-    float seatWidth = 0.06f;
-    float seatHeight = 0.07f;
-    float hitboxWidth = seatWidth * 0.7f;
-    float hitboxHeight = seatHeight * 0.7f;
+    float seatWidth = 0.05f;
+    float seatDepth = 0.042f;
+    float hitboxWidth = seatWidth * 1.1f;
+    float hitboxHeight = seatDepth * 1.1f;
     
     Seat* closestSeat = nullptr;
     float minDistance = 999.0f;

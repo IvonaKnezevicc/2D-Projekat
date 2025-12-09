@@ -30,8 +30,8 @@ Renderer::~Renderer() {
 
 void Renderer::setupShader() {
     shaderProgram = createShader(
-        "Shaders/vertex_shader.glsl",
-        "Shaders/fragment_shader.glsl"
+        "Shaders/vertex_shader.vert",
+        "Shaders/fragment_shader.frag"
     );
     
     if (shaderProgram == 0) {

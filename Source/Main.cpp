@@ -46,7 +46,7 @@ int main()
     int windowWidth = mode->width;
     int windowHeight = mode->height;
     
-    g_window = glfwCreateWindow(windowWidth, windowHeight, "Bioskop - Upravljanje Sedištima", monitor, NULL);
+    g_window = glfwCreateWindow(windowWidth, windowHeight, "Bioskop - Upravljanje sedistima", monitor, NULL);
     if (g_window == NULL) {
         return endProgram("Prozor nije uspeo da se kreira.");
     }
@@ -78,11 +78,11 @@ int main()
     
     auto lastTime = std::chrono::high_resolution_clock::now();
     
-    std::cout << "Bioskop - Upravljanje Sedištima" << std::endl;
+    std::cout << "Bioskop - Upravljanje sedistima" << std::endl;
     std::cout << "Kontrole:" << std::endl;
-    std::cout << "  - Levi klik: Rezervacija/otkazivanje sedišta" << std::endl;
+    std::cout << "  - Levi klik: Rezervacija/otkazivanje sedista" << std::endl;
     std::cout << "  - Tasteri 1-9: Kupovina karata" << std::endl;
-    std::cout << "  - Enter: Početak projekcije" << std::endl;
+    std::cout << "  - Enter: Pocetak projekcije" << std::endl;
     std::cout << "  - Escape: Izlaz" << std::endl;
     
     while (!glfwWindowShouldClose(g_window))
