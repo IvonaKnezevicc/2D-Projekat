@@ -46,7 +46,7 @@ void Cinema::initializeSeats() {
     float startY = 0.5f;
     float rowSpacing = 0.13f;
     float seatWidth = 0.06f;
-    float uniformSpacing = 0.045f;
+    float uniformSpacing = 0.06f;
     
     for (int row = 0; row < numRows; row++) {
         int numSeats = seatsPerRow[row];
@@ -112,8 +112,22 @@ void Cinema::update() {
                 doorOpen = true;
                 state = CinemaState::PEOPLE_EXITING;
                 
-                for (auto& person : people) {
-                    person.startExiting(exitX, exitY);
+                std::vector<std::pair<int, size_t>> sortedIndices;
+                for (size_t i = 0; i < people.size(); i++) {
+                    if (people[i].assignedSeat) {
+                        int priority = people[i].assignedSeat->row * 10000 + (int)(people[i].assignedSeat->x * 1000);
+                        sortedIndices.push_back({priority, i});
+                    } else {
+                        sortedIndices.push_back({999999, i});
+                    }
+                }
+                std::sort(sortedIndices.begin(), sortedIndices.end());
+                
+                for (size_t idx = 0; idx < sortedIndices.size(); idx++) {
+                    size_t i = sortedIndices[idx].second;
+                    people[i].currentFrame = 0;
+                    people[i].delayFrames = idx * 8;
+                    people[i].startExiting(exitX, exitY);
                 }
             }
             break;
@@ -123,7 +137,7 @@ void Cinema::update() {
                 bool allExited = true;
                 for (auto& person : people) {
                     person.update();
-                    if (person.isMoving) {
+                    if (person.isMoving || !person.isExiting || person.currentFrame < person.delayFrames) {
                         allExited = false;
                     }
                 }
@@ -170,16 +184,25 @@ void Cinema::handleKeyPress(int key) {
 Seat* Cinema::findSeatAtPosition(double x, double y) {
     float seatWidth = 0.06f;
     float seatHeight = 0.07f;
+    float hitboxWidth = seatWidth * 0.7f;
+    float hitboxHeight = seatHeight * 0.7f;
+    
+    Seat* closestSeat = nullptr;
+    float minDistance = 999.0f;
     
     for (auto& seat : seats) {
         float dx = fabs(x - seat.x);
         float dy = fabs(y - seat.y);
+        float distance = sqrt(dx * dx + dy * dy);
         
-        if (dx < seatWidth / 2.0f && dy < seatHeight / 2.0f) {
-            return &seat;
+        if (dx < hitboxWidth / 2.0f && dy < hitboxHeight / 2.0f) {
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestSeat = &seat;
+            }
         }
     }
-    return nullptr;
+    return closestSeat;
 }
 
 void Cinema::buyTickets(int count) {
@@ -188,20 +211,45 @@ void Cinema::buyTickets(int count) {
         if (seat.row > maxRow) maxRow = seat.row;
     }
     
-    int maxCol = -1;
-    for (const auto& seat : seats) {
-        if (seat.row == maxRow && seat.col > maxCol) {
-            maxCol = seat.col;
+    for (int row = maxRow; row >= 0; row--) {
+        int maxCol = -1;
+        for (const auto& seat : seats) {
+            if (seat.row == row && seat.col > maxCol) {
+                maxCol = seat.col;
+            }
         }
-    }
-    
-    int found = 0;
-    for (int col = maxCol; col >= 0 && found < count; col--) {
-        for (auto& seat : seats) {
-            if (seat.row == maxRow && seat.col == col && seat.isAvailable()) {
-                seat.status = SeatStatus::BOUGHT;
-                found++;
-                break;
+        
+        for (int startCol = maxCol; startCol >= count - 1; startCol--) {
+            bool allAvailable = true;
+            for (int i = 0; i < count; i++) {
+                int col = startCol - i;
+                bool found = false;
+                for (const auto& seat : seats) {
+                    if (seat.row == row && seat.col == col) {
+                        if (!seat.isAvailable()) {
+                            allAvailable = false;
+                        }
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    allAvailable = false;
+                    break;
+                }
+            }
+            
+            if (allAvailable) {
+                for (int i = 0; i < count; i++) {
+                    int col = startCol - i;
+                    for (auto& seat : seats) {
+                        if (seat.row == row && seat.col == col) {
+                            seat.status = SeatStatus::BOUGHT;
+                            break;
+                        }
+                    }
+                }
+                return;
             }
         }
     }
@@ -233,7 +281,7 @@ void Cinema::createPeople() {
     std::shuffle(availableSeats.begin(), availableSeats.end(), rng);
     
     for (int i = 0; i < numPeople && i < availableSeats.size(); i++) {
-        Person person(doorX, doorY, 0.015f);
+        Person person(doorX, doorY, 0.008f, i * 8);
         person.setTarget(availableSeats[i]);
         people.push_back(person);
     }

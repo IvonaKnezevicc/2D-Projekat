@@ -4,6 +4,7 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <cmath>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "../Header/stb_image.h"
@@ -166,8 +167,8 @@ GLFWcursor* loadImageToCursor(const char* filePath) {
 }
 
 GLFWcursor* createCameraCursor() {
-    const int width = 32;
-    const int height = 32;
+    const int width = 48;
+    const int height = 48;
     unsigned char pixels[width * height * 4];
     
     for (int i = 0; i < width * height * 4; i += 4) {
@@ -180,60 +181,117 @@ GLFWcursor* createCameraCursor() {
     int centerX = width / 2;
     int centerY = height / 2;
     
-    for (int y = centerY - 8; y < centerY + 8; y++) {
-        for (int x = centerX - 10; x < centerX + 10; x++) {
-            if (x >= 0 && x < width && y >= 0 && y < height) {
-                int idx = (y * width + x) * 4;
-                pixels[idx] = 100;
-                pixels[idx + 1] = 100;
-                pixels[idx + 2] = 100;
-                pixels[idx + 3] = 255;
-            }
-        }
-    }
-    
-    int radius = 6;
-    for (int y = centerY - radius; y <= centerY + radius; y++) {
-        for (int x = centerX - radius - 4; x <= centerX + radius - 4; x++) {
-            int dx = x - (centerX - 4);
-            int dy = y - centerY;
-            if (dx * dx + dy * dy <= radius * radius) {
+    int reelRadius1 = 6;
+    int reelX1 = centerX - 8;
+    int reelY1 = 8;
+    for (int y = reelY1 - reelRadius1; y <= reelY1 + reelRadius1; y++) {
+        for (int x = reelX1 - reelRadius1; x <= reelX1 + reelRadius1; x++) {
+            int dx = x - reelX1;
+            int dy = y - reelY1;
+            float dist = sqrt(dx * dx + dy * dy);
+            if (dist <= reelRadius1 && dist >= reelRadius1 - 2.5f) {
                 if (x >= 0 && x < width && y >= 0 && y < height) {
                     int idx = (y * width + x) * 4;
-                    pixels[idx] = 50;
-                    pixels[idx + 1] = 50;
-                    pixels[idx + 2] = 50;
+                    pixels[idx] = 0;
+                    pixels[idx + 1] = 0;
+                    pixels[idx + 2] = 0;
                     pixels[idx + 3] = 255;
                 }
             }
         }
     }
     
-    radius = 4;
-    for (int y = centerY - radius; y <= centerY + radius; y++) {
-        for (int x = centerX - radius - 4; x <= centerX + radius - 4; x++) {
-            int dx = x - (centerX - 4);
-            int dy = y - centerY;
-            if (dx * dx + dy * dy <= radius * radius) {
+    int reelRadius2 = 7;
+    int reelX2 = centerX + 8;
+    int reelY2 = 8;
+    for (int y = reelY2 - reelRadius2; y <= reelY2 + reelRadius2; y++) {
+        for (int x = reelX2 - reelRadius2; x <= reelX2 + reelRadius2; x++) {
+            int dx = x - reelX2;
+            int dy = y - reelY2;
+            float dist = sqrt(dx * dx + dy * dy);
+            if (dist <= reelRadius2 && dist >= reelRadius2 - 2.5f) {
                 if (x >= 0 && x < width && y >= 0 && y < height) {
                     int idx = (y * width + x) * 4;
-                    pixels[idx] = 200;
-                    pixels[idx + 1] = 200;
-                    pixels[idx + 2] = 200;
+                    pixels[idx] = 0;
+                    pixels[idx + 1] = 0;
+                    pixels[idx + 2] = 0;
                     pixels[idx + 3] = 255;
                 }
             }
         }
     }
     
-    for (int y = centerY - 12; y < centerY - 8; y++) {
-        for (int x = centerX - 3; x < centerX + 3; x++) {
+    for (int y = reelY1; y <= reelY1 + 5; y++) {
+        for (int x = reelX1 + 3; x <= reelX2 - 3; x++) {
             if (x >= 0 && x < width && y >= 0 && y < height) {
                 int idx = (y * width + x) * 4;
-                pixels[idx] = 150;
-                pixels[idx + 1] = 150;
-                pixels[idx + 2] = 150;
+                pixels[idx] = 0;
+                pixels[idx + 1] = 0;
+                pixels[idx + 2] = 0;
                 pixels[idx + 3] = 255;
+            }
+        }
+    }
+    
+    for (int y = centerY - 7; y < centerY + 7; y++) {
+        for (int x = centerX - 11; x < centerX + 11; x++) {
+            if (x >= 0 && x < width && y >= 0 && y < height) {
+                int idx = (y * width + x) * 4;
+                bool isEdge = (x == centerX - 11 || x == centerX + 10 || y == centerY - 7 || y == centerY + 6);
+                bool isTopCorner = (y == centerY - 7 && (x >= centerX - 11 && x <= centerX + 10));
+                bool isBottomCorner = (y == centerY + 6 && (x >= centerX - 11 && x <= centerX + 10));
+                bool isLeftCorner = (x == centerX - 11 && (y >= centerY - 7 && y <= centerY + 6));
+                bool isRightCorner = (x == centerX + 10 && (y >= centerY - 7 && y <= centerY + 6));
+                
+                if (isEdge || isTopCorner || isBottomCorner || isLeftCorner || isRightCorner) {
+                    pixels[idx] = 0;
+                    pixels[idx + 1] = 0;
+                    pixels[idx + 2] = 0;
+                    pixels[idx + 3] = 255;
+                }
+            }
+        }
+    }
+    
+    for (int y = centerY - 4; y < centerY + 4; y++) {
+        for (int x = centerX - 6; x < centerX + 6; x++) {
+            if (x >= 0 && x < width && y >= 0 && y < height) {
+                int idx = (y * width + x) * 4;
+                if (x == centerX - 6 || x == centerX + 5 || y == centerY - 4 || y == centerY + 3) {
+                    pixels[idx] = 0;
+                    pixels[idx + 1] = 0;
+                    pixels[idx + 2] = 0;
+                    pixels[idx + 3] = 255;
+                }
+            }
+        }
+    }
+    
+    int lensStartX = centerX + 11;
+    int lensStartY = centerY;
+    int lensWidth = 10;
+    int lensHeight = 16;
+    
+    for (int y = lensStartY - lensHeight/2; y <= lensStartY + lensHeight/2; y++) {
+        for (int x = lensStartX; x < lensStartX + lensWidth; x++) {
+            if (x >= 0 && x < width && y >= 0 && y < height) {
+                int idx = (y * width + x) * 4;
+                int relY = y - lensStartY;
+                int relX = x - lensStartX;
+                
+                bool isLeftEdge = (relX == 0);
+                bool isRightEdge = (relX == lensWidth - 1);
+                bool isTopEdge = (relY == -lensHeight/2 && relX >= 0 && relX < lensWidth);
+                bool isBottomEdge = (relY == lensHeight/2 && relX >= 0 && relX < lensWidth);
+                bool isTopSlope = (relX < lensWidth/2 && relY == -relX - lensHeight/2 + lensWidth/2);
+                bool isBottomSlope = (relX < lensWidth/2 && relY == relX + lensHeight/2 - lensWidth/2);
+                
+                if (isLeftEdge || isRightEdge || isTopEdge || isBottomEdge || isTopSlope || isBottomSlope) {
+                    pixels[idx] = 0;
+                    pixels[idx + 1] = 0;
+                    pixels[idx + 2] = 0;
+                    pixels[idx + 3] = 255;
+                }
             }
         }
     }
@@ -243,7 +301,7 @@ GLFWcursor* createCameraCursor() {
     image.height = height;
     image.pixels = pixels;
     
-    int hotspotX = centerX - 4;
+    int hotspotX = lensStartX + lensWidth / 2;
     int hotspotY = centerY;
     
     return glfwCreateCursor(&image, hotspotX, hotspotY);
