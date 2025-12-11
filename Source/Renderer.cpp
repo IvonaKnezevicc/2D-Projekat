@@ -2,7 +2,6 @@
 #include "../Header/Util.h"
 #include <cmath>
 #include <iostream>
-#include <cstring>
 #include <vector>
 
 Renderer::Renderer(int windowWidth, int windowHeight)
@@ -12,10 +11,6 @@ Renderer::Renderer(int windowWidth, int windowHeight)
     setupBuffers();
     
     studentInfoTexture = loadImageToTexture("Resources/student_info.png");
-    if (studentInfoTexture == 0) {
-        std::cout << "Napomena: Tekstura sa informacijama o studentu nije ucitana. " << std::endl;
-        std::cout << "Kreirajte PNG sliku 'student_info.png' u Resources folderu sa tekstom 'Ivona Knežević, RA 97/2022'" << std::endl;
-    }
 }
 
 Renderer::~Renderer() {
@@ -165,21 +160,7 @@ void Renderer::renderDoor(float x, float y, bool isOpen, float angle) {
     drawRectangle(x, y, frameWidth, frameHeight, 0.3f, 0.3f, 0.3f, 1.0f);
     
     float angleRad = angle * 3.14159265359f / 180.0f;
-    
-    float doorCenterX = x;
-    float doorCenterY = y;
-    
-    float pivotX = x - frameWidth/2.0f + doorWidth/2.0f;
-    float pivotY = y;
-    
-    float offsetX = (doorCenterX - pivotX) * cos(angleRad) - (doorCenterY - pivotY) * sin(angleRad);
-    float offsetY = (doorCenterX - pivotX) * sin(angleRad) + (doorCenterY - pivotY) * cos(angleRad);
-    
-    float rotatedX = pivotX + offsetX;
-    float rotatedY = pivotY + offsetY;
-    
     float greenIntensity = 0.3f + (angle / 90.0f) * 0.7f;
-    
     float doorX = x - (frameWidth/2.0f - doorWidth/2.0f) * (1.0f - cos(angleRad));
     float doorY = y;
     
@@ -292,25 +273,6 @@ void Renderer::drawRectangleWithTexture(float x, float y, float width, float hei
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void Renderer::drawCircle(float x, float y, float radius, float r, float g, float b, float a) {
-    const int segments = 20;
-    const float PI = 3.14159265359f;
-    
-    glUseProgram(shaderProgram);
-    
-    for (int i = 0; i < segments; i++) {
-        float angle1 = 2.0f * PI * i / segments;
-        float angle2 = 2.0f * PI * (i + 1) / segments;
-        
-        float x1 = x + radius * cos(angle1);
-        float y1 = y + radius * sin(angle1);
-        float x2 = x + radius * cos(angle2);
-        float y2 = y + radius * sin(angle2);
-    }
-    
-    drawRectangle(x, y, radius * 2, radius * 2, r, g, b, a);
-}
-
 void Renderer::drawPerson(float x, float y) {
     drawRectangle(x, y + 0.025f, 0.02f, 0.02f, 1.0f, 0.8f, 0.6f, 1.0f);
     
@@ -322,6 +284,3 @@ void Renderer::drawPerson(float x, float y) {
     drawRectangle(x + 0.008f, y - 0.025f, 0.008f, 0.02f, 0.3f, 0.3f, 0.3f, 1.0f);
 }
 
-unsigned int Renderer::createTextTexture(const char* text, int& width, int& height) {
-    return 0;
-}

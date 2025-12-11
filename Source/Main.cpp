@@ -2,7 +2,6 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <chrono>
-#include <thread>
 
 #include "../Header/Util.h"
 #include "../Header/Cinema.h"

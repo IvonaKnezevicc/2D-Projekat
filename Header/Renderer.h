@@ -27,8 +27,6 @@ private:
     void setupShader();
     void drawRectangle(float x, float y, float width, float height, float r, float g, float b, float a = 1.0f);
     void drawRectangleWithTexture(float x, float y, float width, float height, unsigned int texture, float alpha = 1.0f);
-    void drawCircle(float x, float y, float radius, float r, float g, float b, float a = 1.0f);
     void drawPerson(float x, float y);
-    unsigned int createTextTexture(const char* text, int& width, int& height);
 };
 

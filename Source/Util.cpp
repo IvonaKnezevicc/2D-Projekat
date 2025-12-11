@@ -135,37 +135,6 @@ unsigned loadImageToTexture(const char* filePath) {
     }
 }
 
-GLFWcursor* loadImageToCursor(const char* filePath) {
-    int TextureWidth;
-    int TextureHeight;
-    int TextureChannels;
-
-    unsigned char* ImageData = stbi_load(filePath, &TextureWidth, &TextureHeight, &TextureChannels, 0);
-
-    if (ImageData != NULL)
-    {
-        GLFWimage image;
-        image.width = TextureWidth;
-        image.height = TextureHeight;
-        image.pixels = ImageData;
-
-        // Tacka na povr�ini slike kursora koja se pona�a kao hitboks, moze se menjati po potrebi
-        // Trenutno je gornji levi ugao, odnosno na 20% visine i 20% sirine slike kursora
-        int hotspotX = TextureWidth / 5;
-        int hotspotY = TextureHeight / 5;
-
-        GLFWcursor* cursor = glfwCreateCursor(&image, hotspotX, hotspotY);
-        stbi_image_free(ImageData);
-        return cursor;
-    }
-    else {
-        std::cout << "Kursor nije ucitan! Putanja kursora: " << filePath << std::endl;
-        stbi_image_free(ImageData);
-
-    }
-    return nullptr;
-}
-
 GLFWcursor* createCameraCursor() {
     const int width = 48;
     const int height = 48;
