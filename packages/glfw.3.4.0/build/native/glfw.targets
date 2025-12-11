@@ -74,7 +74,7 @@
 
 	<!-- Copy dll redistributable -->
 	<Target Name="GlfwCopyDllRedist" AfterTargets="AfterBuild" Condition="'$(GlfwLinkage)' == 'dynamic'">
-		<Copy SourceFiles="$(MSBuildThisFileDirectory)bin\dynamic\$(GlfwPlatformToolset)\$(PlatformName)\glfw3.dll" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
+		<Copy SourceFiles="$(MSBuildThisFileDirectory)bin\dynamic\$(GlfwPlatformToolset)\$(PlatformName)\glfw3.dll" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" Condition="Exists('$(MSBuildThisFileDirectory)bin\dynamic\$(GlfwPlatformToolset)\$(PlatformName)\glfw3.dll')" />
 	</Target>
 	
 </Project>
