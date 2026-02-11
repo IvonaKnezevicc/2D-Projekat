@@ -32,6 +32,8 @@ public:
     float getScreenColorR() const { return screenColorR; }
     float getScreenColorG() const { return screenColorG; }
     float getScreenColorB() const { return screenColorB; }
+    int getCurrentFilmTextureIndex() const { return currentFilmTextureIndex; }
+    bool isFilmPlaying() const { return state == CinemaState::FILM_PLAYING; }
     
     float getDoorX() const { return doorX; }
     float getDoorY() const { return doorY; }
@@ -70,6 +72,7 @@ private:
     float screenColorR, screenColorG, screenColorB;
     int frameCount;
     int filmDurationFrames;
+    int currentFilmTextureIndex;
     
     float doorX, doorY, doorZ;
     float portalX, portalY, portalZ;

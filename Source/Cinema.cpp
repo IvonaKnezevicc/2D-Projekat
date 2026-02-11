@@ -11,7 +11,7 @@ Cinema::Cinema(int windowWidth, int windowHeight)
     : windowWidth(windowWidth), windowHeight(windowHeight),
       state(CinemaState::RESERVATION), doorOpen(false), doorAngle(0.0f), showDarkOverlay(false),
       screenColorR(1.0f), screenColorG(1.0f), screenColorB(1.0f),
-      frameCount(0), filmDurationFrames(1500),
+      frameCount(0), filmDurationFrames(1500), currentFilmTextureIndex(0),
       rng(std::random_device{}())
 {
     hallWidth = 20.0f;
@@ -26,10 +26,10 @@ Cinema::Cinema(int windowWidth, int windowHeight)
     hallMaxZ = 0.0f;
     
     screenX = 0.0f;
-    screenY = hallHeight * 0.7f;
+    screenWidth = hallWidth * 0.6f;
+    screenHeight = hallHeight * 0.6f;
+    screenY = hallHeight - screenHeight / 2.0f - 0.08f;
     screenZ = hallMaxZ;
-    screenWidth = hallWidth * 0.8f;
-    screenHeight = hallHeight * 0.4f;
     screenDepth = 0.1f;
     
     float doorHeight = 2.5f;
@@ -128,10 +128,7 @@ void Cinema::update() {
             frameCount++;
             
             if (frameCount % 20 == 0) {
-                std::uniform_real_distribution<float> colorDist(0.0f, 1.0f);
-                screenColorR = colorDist(rng);
-                screenColorG = colorDist(rng);
-                screenColorB = colorDist(rng);
+                currentFilmTextureIndex = (currentFilmTextureIndex + 1) % 20;
             }
             
             if (frameCount >= filmDurationFrames) {
@@ -418,6 +415,7 @@ void Cinema::resetCinema() {
     screenColorG = 1.0f;
     screenColorB = 1.0f;
     frameCount = 0;
+    currentFilmTextureIndex = 0;
 }
 
 float Cinema::getStairX(bool isLeft) const {

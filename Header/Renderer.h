@@ -3,6 +3,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <vector>
 #include "Cinema.h"
 #include "Seat.h"
 #include "Person.h"
@@ -17,6 +18,7 @@ public:
     void renderSeat(const Seat& seat, const glm::mat4& view, const glm::mat4& projection);
     void renderPerson(const Person& person, const glm::mat4& view, const glm::mat4& projection);
     void renderScreen(float x, float y, float z, float width, float height, float depth, float r, float g, float b, const glm::mat4& view, const glm::mat4& projection);
+    void renderScreenWithTexture(float x, float y, float z, float width, float height, float depth, unsigned int texture, const glm::mat4& view, const glm::mat4& projection);
     void renderDoor(float x, float y, float z, bool isOpen, float angle, const glm::mat4& view, const glm::mat4& projection);
     void renderPortal(float x, float y, float z, const glm::mat4& view, const glm::mat4& projection);
     void renderHall(const Cinema& cinema, const glm::mat4& view, const glm::mat4& projection);
@@ -33,6 +35,7 @@ private:
     unsigned int shaderProgram;
     unsigned int VAO, VBO, EBO;
     unsigned int studentInfoTexture;
+    std::vector<unsigned int> filmTextures;
     
     void setupBuffers();
     void setupShader();

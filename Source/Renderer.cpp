@@ -7,6 +7,7 @@
 #include <cmath>
 #include <iostream>
 #include <vector>
+#include <cstdio>
 
 Renderer::Renderer(int windowWidth, int windowHeight)
     : windowWidth(windowWidth), windowHeight(windowHeight), studentInfoTexture(0)
@@ -15,6 +16,27 @@ Renderer::Renderer(int windowWidth, int windowHeight)
     setupBuffers();
     
     studentInfoTexture = loadImageToTexture("Resources/student_info.png");
+    
+    for (int i = 1; i <= 20; i++) {
+        char path[256];
+        sprintf_s(path, "Resources/film_frame_%02d.jpg", i);
+        unsigned int texture = loadImageToTexture(path);
+        if (texture == 0) {
+            sprintf_s(path, "Resources/film_frame_%02d.png", i);
+            texture = loadImageToTexture(path);
+        }
+        if (texture == 0) {
+            sprintf_s(path, "Resources/film_frame_%d.jpg", i);
+            texture = loadImageToTexture(path);
+        }
+        if (texture == 0) {
+            sprintf_s(path, "Resources/film_frame_%d.png", i);
+            texture = loadImageToTexture(path);
+        }
+        if (texture != 0) {
+            filmTextures.push_back(texture);
+        }
+    }
 }
 
 Renderer::~Renderer() {
@@ -117,16 +139,16 @@ void Renderer::render(const Cinema& cinema, const Camera& camera, int windowWidt
     
     renderHall(cinema, view, projection);
     
-    renderScreen(cinema.getScreenX(), cinema.getScreenY(), cinema.getScreenZ(),
-                 cinema.getScreenWidth(), cinema.getScreenHeight(), cinema.getScreenDepth(),
-                 cinema.getScreenColorR(), cinema.getScreenColorG(), cinema.getScreenColorB(),
-                 view, projection);
-    
-    renderDoor(cinema.getDoorX(), cinema.getDoorY(), cinema.getDoorZ(), 
-               cinema.isDoorOpen(), cinema.getDoorAngle(), view, projection);
-    
-    if (cinema.isDoorOpen()) {
-        renderPortal(cinema.getPortalX(), cinema.getPortalY(), cinema.getPortalZ(), view, projection);
+    if (cinema.isFilmPlaying() && !filmTextures.empty()) {
+        int textureIndex = cinema.getCurrentFilmTextureIndex() % filmTextures.size();
+        renderScreenWithTexture(cinema.getScreenX(), cinema.getScreenY(), cinema.getScreenZ(),
+                                cinema.getScreenWidth(), cinema.getScreenHeight(), cinema.getScreenDepth(),
+                                filmTextures[textureIndex], view, projection);
+    } else {
+        renderScreen(cinema.getScreenX(), cinema.getScreenY(), cinema.getScreenZ(),
+                     cinema.getScreenWidth(), cinema.getScreenHeight(), cinema.getScreenDepth(),
+                     cinema.getScreenColorR(), cinema.getScreenColorG(), cinema.getScreenColorB(),
+                     view, projection);
     }
     
     for (const auto& seat : cinema.getSeats()) {
@@ -135,6 +157,13 @@ void Renderer::render(const Cinema& cinema, const Camera& camera, int windowWidt
     
     for (const auto& person : cinema.getPeople()) {
         renderPerson(person, view, projection);
+    }
+    
+    renderDoor(cinema.getDoorX(), cinema.getDoorY(), cinema.getDoorZ(), 
+               cinema.isDoorOpen(), cinema.getDoorAngle(), view, projection);
+    
+    if (cinema.isDoorOpen()) {
+        renderPortal(cinema.getPortalX(), cinema.getPortalY(), cinema.getPortalZ(), view, projection);
     }
     
     if (cinema.showOverlay()) {
@@ -187,19 +216,63 @@ void Renderer::renderScreen(float x, float y, float z, float width, float height
     drawCube(screenPos, screenSize, glm::vec3(r, g, b), view, projection);
 }
 
+void Renderer::renderScreenWithTexture(float x, float y, float z, float width, float height, float depth, unsigned int texture,
+                                       const glm::mat4& view, const glm::mat4& projection) {
+    glUseProgram(shaderProgram);
+    
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(x, y, z));
+    model = glm::scale(model, glm::vec3(width, height, depth));
+    
+    GLint modelLoc = glGetUniformLocation(shaderProgram, "uModel");
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    
+    GLint useLightingLoc = glGetUniformLocation(shaderProgram, "uUseLighting");
+    glUniform1i(useLightingLoc, 0);
+    
+    GLint colorLoc = glGetUniformLocation(shaderProgram, "uColor");
+    glUniform4f(colorLoc, 1.0f, 1.0f, 1.0f, 1.0f);
+    
+    GLint useTexLoc = glGetUniformLocation(shaderProgram, "uUseTexture");
+    glUniform1i(useTexLoc, 1);
+    
+    GLint alphaLoc = glGetUniformLocation(shaderProgram, "uAlpha");
+    glUniform1f(alphaLoc, 1.0f);
+    
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    
+    glBindVertexArray(VAO);
+    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
+    
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
 void Renderer::renderDoor(float x, float y, float z, bool isOpen, float angle, const glm::mat4& view, const glm::mat4& projection) {
     glDisable(GL_BLEND);
+    glDepthMask(GL_TRUE);
+
+    glUseProgram(shaderProgram);
+    GLint useLightingLoc = glGetUniformLocation(shaderProgram, "uUseLighting");
+    glUniform1i(useLightingLoc, 0);
 
     float doorWidth = 1.5f;
     float doorHeight = 2.5f;
     float doorDepth = 0.1f;
+    
+    float doorZ = z - 0.01f;
 
-    glm::vec3 framePos(x, y, z);
+    glm::vec3 framePos(x, y, doorZ);
     glm::vec3 frameSize(0.2f, doorHeight + 0.2f, doorDepth);
     drawCube(framePos, frameSize, glm::vec3(0.3f, 0.3f, 0.3f), view, projection);
 
     glm::mat4 model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(x, y, z));
+    model = glm::translate(model, glm::vec3(x, y, doorZ));
     if (isOpen) {
         model = glm::rotate(model, glm::radians(angle), glm::vec3(0.0f, 1.0f, 0.0f));
     }
