@@ -28,10 +28,15 @@ float lastX = 0.0f;
 float lastY = 0.0f;
 
 void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
-    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS && g_cinema) {
+    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS && g_cinema && g_camera && g_renderer) {
         double xpos, ypos;
         glfwGetCursorPos(window, &xpos, &ypos);
-        g_cinema->handleMouseClick(xpos, ypos);
+        
+        glm::mat4 view = g_camera->getViewMatrix();
+        float aspect = (float)g_renderer->getWindowWidth() / (float)g_renderer->getWindowHeight();
+        glm::mat4 projection = glm::perspective(glm::radians(g_camera->getFOV()), aspect, 0.1f, 100.0f);
+        
+        g_cinema->handleMouseClick(xpos, ypos, view, projection, g_camera->getPosition());
     }
 }
 

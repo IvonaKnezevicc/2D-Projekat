@@ -1,6 +1,8 @@
 #pragma once
 #include "Seat.h"
 
+class Cinema;
+
 struct Person {
     float x, y, z;  // Dodata z koordinata za 3D
     float targetX, targetY, targetZ;  // Dodata targetZ za 3D
@@ -16,7 +18,7 @@ struct Person {
     
     Person(float startX, float startY, float startZ = 0.0f, float speed = 0.008f, int delayFrames = 0);
     
-    void setTarget(Seat* seat);
+    void setTarget(Seat* seat, const Cinema& cinema);
     void update();
     void startExiting(float exitX, float exitY, float exitZ);
 };

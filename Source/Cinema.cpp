@@ -3,6 +3,9 @@
 #include <GLFW/glfw3.h>
 #include <algorithm>
 #include <cmath>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <limits>
 
 Cinema::Cinema(int windowWidth, int windowHeight)
     : windowWidth(windowWidth), windowHeight(windowHeight),
@@ -36,10 +39,14 @@ Cinema::Cinema(int windowWidth, int windowHeight)
     doorY = doorHeight / 2.0f;
     doorZ = hallMaxZ;
     
+    portalX = doorX - doorWidth - 0.5f;
+    portalY = doorY;
+    portalZ = doorZ;
+    
     float personHeight = 1.0f;
     float personStartY = personHeight / 2.0f;
     
-    exitX = doorX;
+    exitX = doorX - 0.02f;
     exitY = personStartY;
     exitZ = doorZ;
     
@@ -53,7 +60,11 @@ void Cinema::initializeSeats() {
     seats.clear();
     
     int numRows = 10;
-    int seatsPerRow[] = {6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+    int baseSeatsPerRow[] = {6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+    int seatsPerRow[10];
+    for (int i = 0; i < numRows; i++) {
+        seatsPerRow[i] = baseSeatsPerRow[i] + 6;
+    }
     
     float seatWidth = 0.6f;
     float seatDepth = 0.6f;
@@ -176,16 +187,25 @@ void Cinema::update() {
     }
 }
 
-void Cinema::handleMouseClick(double x, double y) {
+void Cinema::handleMouseClick(double mouseX, double mouseY, const glm::mat4& view, const glm::mat4& projection, const glm::vec3& cameraPos) {
     if (state != CinemaState::RESERVATION) return;
     
-    float aspect = (float)windowWidth / (float)windowHeight;
-    double glX = ((x / windowWidth) * 2.0 - 1.0) * aspect;
-    double glY = 1.0 - (y / windowHeight) * 2.0;
+    float centerX = 0.0f;
+    float centerY = 0.0f;
     
-    Seat* seat = findSeatAtPosition(glX, glY);
-    if (seat) {
-        seat->toggleReservation();
+    glm::vec4 rayClip(centerX, centerY, -1.0f, 1.0f);
+    glm::mat4 invProjection = glm::inverse(projection);
+    glm::vec4 rayEye = invProjection * rayClip;
+    rayEye = glm::vec4(rayEye.x, rayEye.y, -1.0f, 0.0f);
+    rayEye = glm::normalize(rayEye);
+    
+    glm::mat4 invView = glm::inverse(view);
+    glm::vec4 rayWorld4 = invView * rayEye;
+    glm::vec3 rayWorld = glm::normalize(glm::vec3(rayWorld4));
+    
+    Seat* clickedSeat = findSeatAtRay(cameraPos, rayWorld);
+    if (clickedSeat) {
+        clickedSeat->toggleReservation();
     }
 }
 
@@ -200,27 +220,90 @@ void Cinema::handleKeyPress(int key) {
     }
 }
 
-Seat* Cinema::findSeatAtPosition(double x, double y) {
-    float seatWidth = 0.05f;
-    float seatDepth = 0.042f;
-    float hitboxWidth = seatWidth * 1.1f;
-    float hitboxHeight = seatDepth * 1.1f;
+Seat* Cinema::findSeatAtRay(const glm::vec3& rayOrigin, const glm::vec3& rayDir) {
+    float seatWidth = 0.6f;
+    float seatDepth = 0.6f;
+    float seatHeight = 0.4f;
+    float backHeight = 0.8f;
     
     Seat* closestSeat = nullptr;
-    float minDistance = 999.0f;
+    float minDistance = std::numeric_limits<float>::max();
     
     for (auto& seat : seats) {
-        float dx = fabs(x - seat.x);
-        float dy = fabs(y - seat.y);
-        float distance = sqrt(dx * dx + dy * dy);
+        float backY = seat.y + seatHeight * 0.5f + backHeight * 0.5f;
+        float backZ = seat.z - seatDepth * 0.45f;
         
-        if (dx < hitboxWidth / 2.0f && dy < hitboxHeight / 2.0f) {
-            if (distance < minDistance) {
-                minDistance = distance;
-                closestSeat = &seat;
+        float minX = seat.x - seatWidth / 2.0f;
+        float maxX = seat.x + seatWidth / 2.0f;
+        float minY = seat.y;
+        float maxY = backY + backHeight / 2.0f;
+        float minZ = backZ - 0.05f;
+        float maxZ = seat.z + seatDepth / 2.0f;
+        
+        float tmin, tmax;
+        if (fabs(rayDir.x) < 0.0001f) {
+            if (rayOrigin.x < minX || rayOrigin.x > maxX) continue;
+            tmin = -std::numeric_limits<float>::max();
+            tmax = std::numeric_limits<float>::max();
+        } else {
+            tmin = (minX - rayOrigin.x) / rayDir.x;
+            tmax = (maxX - rayOrigin.x) / rayDir.x;
+            if (tmin > tmax) std::swap(tmin, tmax);
+        }
+        
+        float tymin, tymax;
+        if (fabs(rayDir.y) < 0.0001f) {
+            if (rayOrigin.y < minY || rayOrigin.y > maxY) continue;
+            tymin = -std::numeric_limits<float>::max();
+            tymax = std::numeric_limits<float>::max();
+        } else {
+            tymin = (minY - rayOrigin.y) / rayDir.y;
+            tymax = (maxY - rayOrigin.y) / rayDir.y;
+            if (tymin > tymax) std::swap(tymin, tymax);
+        }
+        
+        if ((tmin > tymax) || (tymin > tmax)) continue;
+        
+        if (tymin > tmin) tmin = tymin;
+        if (tymax < tmax) tmax = tymax;
+        
+        float tzmin, tzmax;
+        if (fabs(rayDir.z) < 0.0001f) {
+            if (rayOrigin.z < minZ || rayOrigin.z > maxZ) continue;
+            tzmin = -std::numeric_limits<float>::max();
+            tzmax = std::numeric_limits<float>::max();
+        } else {
+            tzmin = (minZ - rayOrigin.z) / rayDir.z;
+            tzmax = (maxZ - rayOrigin.z) / rayDir.z;
+            if (tzmin > tzmax) std::swap(tzmin, tzmax);
+        }
+        
+        if ((tmin > tzmax) || (tzmin > tmax)) continue;
+        
+        if (tzmin > tmin) tmin = tzmin;
+        if (tzmax < tmax) tmax = tzmax;
+        
+        if (tmin > 0.0f && tmin < 100.0f) {
+            glm::vec3 seatCenter(seat.x, seat.y + seatHeight / 2.0f, seat.z);
+            glm::vec3 toSeat = seatCenter - rayOrigin;
+            
+            float t = glm::dot(toSeat, rayDir);
+            if (t > 0.0f) {
+                glm::vec3 closestPoint = rayOrigin + rayDir * t;
+                float distanceToCenter = glm::length(seatCenter - closestPoint);
+                
+                if (distanceToCenter < minDistance) {
+                    minDistance = distanceToCenter;
+                    closestSeat = &seat;
+                }
             }
         }
     }
+    
+    if (minDistance > 0.4f) {
+        return nullptr;
+    }
+    
     return closestSeat;
 }
 
@@ -299,14 +382,12 @@ void Cinema::createPeople() {
     
     std::shuffle(availableSeats.begin(), availableSeats.end(), rng);
     
-    // Pozicija za ljude koji ulaze - na podu, blizu vrata
-    // Ljudi su visoki 1.0f (centar na 0.5f), pa počinju na podu
     float personHeight = 1.0f;
-    float personStartY = personHeight / 2.0f;  // Centar osobe na 0.5m od poda
+    float personStartY = personHeight / 2.0f;
     
     for (int i = 0; i < numPeople && i < availableSeats.size(); i++) {
-        Person person(doorX, personStartY, doorZ, 0.03f, i * 8);  // Ljudi počinju na podu (ubrzano kretanje)
-        person.setTarget(availableSeats[i]);
+        Person person(exitX, personStartY, exitZ, 0.03f, i * 8);
+        person.setTarget(availableSeats[i], *this);
         people.push_back(person);
     }
 }
@@ -337,4 +418,18 @@ void Cinema::resetCinema() {
     screenColorG = 1.0f;
     screenColorB = 1.0f;
     frameCount = 0;
+}
+
+float Cinema::getStairX(bool isLeft) const {
+    if (isLeft) {
+        return hallMinX + 1.0f;
+    } else {
+        return hallMaxX - 1.0f;
+    }
+}
+
+float Cinema::getStairZ(int row) const {
+    float startZ = hallMaxZ - 2.0f;
+    float rowSpacing = 1.0f;
+    return startZ - row * rowSpacing;
 }

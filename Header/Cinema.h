@@ -3,6 +3,7 @@
 #include "Person.h"
 #include <vector>
 #include <random>
+#include <glm/glm.hpp>
 
 enum class CinemaState {
     RESERVATION,
@@ -18,7 +19,7 @@ public:
     ~Cinema();
     
     void update();
-    void handleMouseClick(double x, double y);
+    void handleMouseClick(double x, double y, const glm::mat4& view, const glm::mat4& projection, const glm::vec3& cameraPos);
     void handleKeyPress(int key);
     
     const std::vector<Seat>& getSeats() const { return seats; }
@@ -35,6 +36,9 @@ public:
     float getDoorX() const { return doorX; }
     float getDoorY() const { return doorY; }
     float getDoorZ() const { return doorZ; }
+    float getPortalX() const { return portalX; }
+    float getPortalY() const { return portalY; }
+    float getPortalZ() const { return portalZ; }
     float getScreenX() const { return screenX; }
     float getScreenY() const { return screenY; }
     float getScreenZ() const { return screenZ; }
@@ -49,6 +53,9 @@ public:
     float getHallMaxY() const { return hallMaxY; }
     float getHallMinZ() const { return hallMinZ; }
     float getHallMaxZ() const { return hallMaxZ; }
+    
+    float getStairX(bool isLeft) const;
+    float getStairZ(int row) const;
     
 private:
     int windowWidth, windowHeight;
@@ -65,6 +72,7 @@ private:
     int filmDurationFrames;
     
     float doorX, doorY, doorZ;
+    float portalX, portalY, portalZ;
     float screenX, screenY, screenZ, screenWidth, screenHeight, screenDepth;
     float exitX, exitY, exitZ;
     
@@ -78,7 +86,7 @@ private:
     void buyTickets(int count);
     void startProjection();
     void createPeople();
-    Seat* findSeatAtPosition(double x, double y);
+    Seat* findSeatAtRay(const glm::vec3& rayOrigin, const glm::vec3& rayDir);
     int countReservedAndBought() const;
     void resetCinema();
 };

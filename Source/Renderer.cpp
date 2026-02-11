@@ -1,4 +1,5 @@
 ﻿#include "../Header/Renderer.h"
+#include "../Header/Cinema.h"
 #include "../Header/Util.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -111,7 +112,6 @@ void Renderer::render(const Cinema& cinema, const Camera& camera, int windowWidt
     GLint viewLoc = glGetUniformLocation(shaderProgram, "uView");
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
     
-    // Osvetljenje (za sada iskljuÄeno - biÄ‡e implementirano kasnije)
     GLint useLightingLoc = glGetUniformLocation(shaderProgram, "uUseLighting");
     glUniform1i(useLightingLoc, false);
     
@@ -123,7 +123,11 @@ void Renderer::render(const Cinema& cinema, const Camera& camera, int windowWidt
                  view, projection);
     
     renderDoor(cinema.getDoorX(), cinema.getDoorY(), cinema.getDoorZ(), 
-               cinema.isDoorOpen(), cinema.getDoorAngle(),                view, projection);
+               cinema.isDoorOpen(), cinema.getDoorAngle(), view, projection);
+    
+    if (cinema.isDoorOpen()) {
+        renderPortal(cinema.getPortalX(), cinema.getPortalY(), cinema.getPortalZ(), view, projection);
+    }
     
     for (const auto& seat : cinema.getSeats()) {
         renderSeat(seat, view, projection);
@@ -138,6 +142,7 @@ void Renderer::render(const Cinema& cinema, const Camera& camera, int windowWidt
     }
     
     renderStudentInfo();
+    renderCrosshair();
 }
 
 void Renderer::renderSeat(const Seat& seat, const glm::mat4& view, const glm::mat4& projection) {
@@ -218,6 +223,16 @@ void Renderer::renderDoor(float x, float y, float z, bool isOpen, float angle, c
     glBindVertexArray(0);
 
     glEnable(GL_BLEND);
+}
+
+void Renderer::renderPortal(float x, float y, float z, const glm::mat4& view, const glm::mat4& projection) {
+    float portalWidth = 1.5f;
+    float portalHeight = 2.5f;
+    float portalDepth = 0.1f;
+    
+    glm::vec3 portalPos(x, y, z);
+    glm::vec3 portalSize(portalWidth, portalHeight, portalDepth);
+    drawCube(portalPos, portalSize, glm::vec3(0.0f, 0.0f, 0.0f), view, projection);
 }
 
 void Renderer::renderOverlay() {
@@ -321,6 +336,53 @@ void Renderer::drawRectangleWithTexture(float x, float y, float width, float hei
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
+void Renderer::renderCrosshair() {
+    glDisable(GL_DEPTH_TEST);
+    glUseProgram(shaderProgram);
+    
+    float aspect = (float)windowWidth / (float)windowHeight;
+    glm::mat4 ortho = glm::ortho(-aspect, aspect, -1.0f, 1.0f, -1.0f, 1.0f);
+    glm::mat4 view = glm::mat4(1.0f);
+    
+    GLint projLoc = glGetUniformLocation(shaderProgram, "uProjection");
+    glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(ortho));
+    
+    GLint viewLoc = glGetUniformLocation(shaderProgram, "uView");
+    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+    
+    GLint useLightingLoc = glGetUniformLocation(shaderProgram, "uUseLighting");
+    glUniform1i(useLightingLoc, false);
+    
+    float crosshairSize = 0.02f;
+    float crosshairThickness = 0.003f;
+    
+    glm::mat4 model = glm::mat4(1.0f);
+    GLint modelLoc = glGetUniformLocation(shaderProgram, "uModel");
+    GLint colorLoc = glGetUniformLocation(shaderProgram, "uColor");
+    GLint useTexLoc = glGetUniformLocation(shaderProgram, "uUseTexture");
+    GLint alphaLoc = glGetUniformLocation(shaderProgram, "uAlpha");
+    
+    glUniform1i(useTexLoc, 0);
+    glUniform1f(alphaLoc, 1.0f);
+    glUniform4f(colorLoc, 1.0f, 1.0f, 1.0f, 0.8f);
+    
+    model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+    model = glm::scale(model, glm::vec3(crosshairThickness, crosshairSize, 1.0f));
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glBindVertexArray(VAO);
+    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+    
+    model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+    model = glm::scale(model, glm::vec3(crosshairSize, crosshairThickness, 1.0f));
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+    
+    glBindVertexArray(0);
+    glEnable(GL_DEPTH_TEST);
+}
+
 void Renderer::drawPerson(float x, float y) {
     drawRectangle(x, y + 0.025f, 0.02f, 0.02f, 1.0f, 0.8f, 0.6f, 1.0f);
     
@@ -358,17 +420,52 @@ void Renderer::drawCube(glm::vec3 position, glm::vec3 size, glm::vec3 color,
 }
 
 void Renderer::renderHall(const Cinema& cinema, const glm::mat4& view, const glm::mat4& projection) {
-    glm::vec3 floorPos(
-        0.0f,
-        0.0f,
-        (cinema.getHallMinZ() + cinema.getHallMaxZ()) / 2.0f
-    );
-    glm::vec3 floorSize(
-        cinema.getHallMaxX() - cinema.getHallMinX(),
-        0.1f,
-        cinema.getHallMaxZ() - cinema.getHallMinZ()
-    );
-    drawCube(floorPos, floorSize, glm::vec3(0.2f, 0.2f, 0.2f), view, projection);
+    float seatStartZ = cinema.getHallMaxZ() - 2.0f;
+    float seatEndZ = seatStartZ - 9.0f * 1.0f;
+    
+    float seatHeight = 0.4f;
+    float stepHeight = 0.15f;
+    float startY = seatHeight / 2.0f + 0.05f;
+    int numRows = 10;
+    float lastStairY = startY + (numRows - 1) * stepHeight;
+    
+    if (seatEndZ > cinema.getHallMinZ()) {
+        glm::vec3 floorFrontPos(
+            0.0f,
+            0.0f,
+            (cinema.getHallMaxZ() + seatStartZ) / 2.0f
+        );
+        glm::vec3 floorFrontSize(
+            cinema.getHallMaxX() - cinema.getHallMinX(),
+            0.1f,
+            cinema.getHallMaxZ() - seatStartZ
+        );
+        drawCube(floorFrontPos, floorFrontSize, glm::vec3(0.2f, 0.2f, 0.2f), view, projection);
+        
+        glm::vec3 floorBackPos(
+            0.0f,
+            lastStairY,
+            (seatEndZ + cinema.getHallMinZ()) / 2.0f
+        );
+        glm::vec3 floorBackSize(
+            cinema.getHallMaxX() - cinema.getHallMinX(),
+            0.1f,
+            seatEndZ - cinema.getHallMinZ()
+        );
+        drawCube(floorBackPos, floorBackSize, glm::vec3(0.25f, 0.25f, 0.25f), view, projection);
+    } else {
+        glm::vec3 floorPos(
+            0.0f,
+            0.0f,
+            (cinema.getHallMinZ() + cinema.getHallMaxZ()) / 2.0f
+        );
+        glm::vec3 floorSize(
+            cinema.getHallMaxX() - cinema.getHallMinX(),
+            0.1f,
+            cinema.getHallMaxZ() - cinema.getHallMinZ()
+        );
+        drawCube(floorPos, floorSize, glm::vec3(0.2f, 0.2f, 0.2f), view, projection);
+    }
 
     glm::vec3 ceilingPos(
         0.0f,
@@ -464,5 +561,41 @@ void Renderer::renderHall(const Cinema& cinema, const glm::mat4& view, const glm
             0.1f
         );
         drawCube(backWallRightPos, backWallRightSize, glm::vec3(0.25f, 0.25f, 0.25f), view, projection);
+    }
+    
+    glm::vec3 frontWallPos(
+        0.0f,
+        cinema.getHallMaxY() / 2.0f,
+        cinema.getHallMinZ()
+    );
+    glm::vec3 frontWallSize(
+        cinema.getHallMaxX() - cinema.getHallMinX(),
+        cinema.getHallMaxY(),
+        0.1f
+    );
+    drawCube(frontWallPos, frontWallSize, glm::vec3(0.0f, 0.0f, 0.0f), view, projection);
+    
+    renderStairs(cinema, view, projection);
+}
+
+void Renderer::renderStairs(const Cinema& cinema, const glm::mat4& view, const glm::mat4& projection) {
+    int numRows = 10;
+    float seatHeight = 0.4f;
+    float stepHeight = 0.15f;
+    float startY = seatHeight / 2.0f + 0.05f;
+    float startZ = cinema.getHallMaxZ() - 2.0f;
+    float rowSpacing = 1.0f;
+    
+    float stairDepth = 1.0f;
+    float stairHeight = stepHeight;
+    float stairWidth = cinema.getHallMaxX() - cinema.getHallMinX();
+    
+    for (int row = 0; row < numRows; row++) {
+        float y = startY + row * stepHeight;
+        float z = startZ - row * rowSpacing;
+        
+        glm::vec3 stairPos(0.0f, y, z);
+        glm::vec3 stairSize(stairWidth, stairHeight, stairDepth);
+        drawCube(stairPos, stairSize, glm::vec3(0.3f, 0.3f, 0.3f), view, projection);
     }
 }

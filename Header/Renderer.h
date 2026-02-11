@@ -18,9 +18,15 @@ public:
     void renderPerson(const Person& person, const glm::mat4& view, const glm::mat4& projection);
     void renderScreen(float x, float y, float z, float width, float height, float depth, float r, float g, float b, const glm::mat4& view, const glm::mat4& projection);
     void renderDoor(float x, float y, float z, bool isOpen, float angle, const glm::mat4& view, const glm::mat4& projection);
+    void renderPortal(float x, float y, float z, const glm::mat4& view, const glm::mat4& projection);
     void renderHall(const Cinema& cinema, const glm::mat4& view, const glm::mat4& projection);
+    void renderStairs(const Cinema& cinema, const glm::mat4& view, const glm::mat4& projection);
     void renderOverlay();
     void renderStudentInfo();
+    void renderCrosshair();
+    
+    int getWindowWidth() const { return windowWidth; }
+    int getWindowHeight() const { return windowHeight; }
     
 private:
     int windowWidth, windowHeight;
