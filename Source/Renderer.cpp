@@ -1,5 +1,8 @@
-#include "../Header/Renderer.h"
+﻿#include "../Header/Renderer.h"
 #include "../Header/Util.h"
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <cmath>
 #include <iostream>
 #include <vector>
@@ -36,15 +39,39 @@ void Renderer::setupShader() {
 
 void Renderer::setupBuffers() {
     float vertices[] = {
-        0.5f,  0.5f,    1.0f, 1.0f,
-        0.5f, -0.5f,    1.0f, 0.0f,
-        -0.5f, -0.5f,   0.0f, 0.0f,
-        -0.5f,  0.5f,   0.0f, 1.0f
+        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f, 0.0f,
+         0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f, 1.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 0.0f,
+         0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
+         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 1.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
+        -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
+        -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
+         0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+         0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 1.0f,
+         0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 0.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f,
+         0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 1.0f,
+         0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 0.0f
     };
     
     unsigned int indices[] = {
-        0, 1, 3,
-        1, 2, 3
+        0,  1,  2,   2,  3,  0,
+        4,  5,  6,   6,  7,  4,
+        8,  9,  10,  10, 11, 8,
+        12, 13, 14,  14, 15, 12,
+        16, 17, 18,  18, 19, 16,
+        20, 21, 22,  22, 23, 20
     };
     
     glGenVertexArrays(1, &VAO);
@@ -59,41 +86,51 @@ void Renderer::setupBuffers() {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
     
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
     
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
+    
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
     
     glBindVertexArray(0);
 }
 
-void Renderer::render(const Cinema& cinema) {
+void Renderer::render(const Cinema& cinema, const Camera& camera, int windowWidth, int windowHeight) {
     glUseProgram(shaderProgram);
     
     float aspect = (float)windowWidth / (float)windowHeight;
-    float proj[16] = {
-        1.0f/aspect, 0.0f, 0.0f, 0.0f,
-        0.0f, 1.0f, 0.0f, 0.0f,
-        0.0f, 0.0f, 1.0f, 0.0f,
-        0.0f, 0.0f, 0.0f, 1.0f
-    };
+    glm::mat4 projection = glm::perspective(glm::radians(camera.getFOV()), aspect, 0.1f, 100.0f);
+    glm::mat4 view = camera.getViewMatrix();
     
     GLint projLoc = glGetUniformLocation(shaderProgram, "uProjection");
-    glUniformMatrix4fv(projLoc, 1, GL_FALSE, proj);
+    glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
     
-    renderScreen(cinema.getScreenX(), cinema.getScreenY(), 
-                 cinema.getScreenWidth(), cinema.getScreenHeight(),
-                 cinema.getScreenColorR(), cinema.getScreenColorG(), cinema.getScreenColorB());
+    GLint viewLoc = glGetUniformLocation(shaderProgram, "uView");
+    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
     
-    renderDoor(cinema.getDoorX(), cinema.getDoorY(), cinema.isDoorOpen(), cinema.getDoorAngle());
+    // Osvetljenje (za sada iskljuÄeno - biÄ‡e implementirano kasnije)
+    GLint useLightingLoc = glGetUniformLocation(shaderProgram, "uUseLighting");
+    glUniform1i(useLightingLoc, false);
+    
+    renderHall(cinema, view, projection);
+    
+    renderScreen(cinema.getScreenX(), cinema.getScreenY(), cinema.getScreenZ(),
+                 cinema.getScreenWidth(), cinema.getScreenHeight(), cinema.getScreenDepth(),
+                 cinema.getScreenColorR(), cinema.getScreenColorG(), cinema.getScreenColorB(),
+                 view, projection);
+    
+    renderDoor(cinema.getDoorX(), cinema.getDoorY(), cinema.getDoorZ(), 
+               cinema.isDoorOpen(), cinema.getDoorAngle(),                view, projection);
     
     for (const auto& seat : cinema.getSeats()) {
-        renderSeat(seat);
+        renderSeat(seat, view, projection);
     }
     
     for (const auto& person : cinema.getPeople()) {
-        renderPerson(person);
+        renderPerson(person, view, projection);
     }
     
     if (cinema.showOverlay()) {
@@ -103,7 +140,7 @@ void Renderer::render(const Cinema& cinema) {
     renderStudentInfo();
 }
 
-void Renderer::renderSeat(const Seat& seat) {
+void Renderer::renderSeat(const Seat& seat, const glm::mat4& view, const glm::mat4& projection) {
     float r, g, b;
     
     switch (seat.status) {
@@ -118,63 +155,69 @@ void Renderer::renderSeat(const Seat& seat) {
             break;
     }
     
-    float seatWidth = 0.05f;
-    float seatDepth = 0.042f;
-    float backHeight = 0.024f;
-    float armrestWidth = 0.009f;
-    float armrestDepth = 0.038f;
+    const float seatWidth = 0.6f;
+    const float seatDepth = 0.6f;
+    const float seatHeight = 0.4f;
+    const float backHeight = 0.8f;
     
-    drawRectangle(seat.x, seat.y, seatWidth, seatDepth, r, g, b, 1.0f);
+    glm::vec3 basePos(seat.x, seat.y, seat.z);
+    glm::vec3 baseSize(seatWidth, seatHeight, seatDepth);
+    drawCube(basePos, baseSize, glm::vec3(r, g, b), view, projection);
     
-    float backY = seat.y - seatDepth/2.0f - backHeight/2.0f;
-    drawRectangle(seat.x, backY, seatWidth * 0.94f, backHeight, r * 0.87f, g * 0.87f, b * 0.87f, 1.0f);
-    
-    float leftArmrestX = seat.x - seatWidth/2.0f - armrestWidth/2.0f;
-    drawRectangle(leftArmrestX, seat.y, armrestWidth, armrestDepth, r * 0.73f, g * 0.73f, b * 0.73f, 1.0f);
-    
-    float rightArmrestX = seat.x + seatWidth/2.0f + armrestWidth/2.0f;
-    drawRectangle(rightArmrestX, seat.y, armrestWidth, armrestDepth, r * 0.73f, g * 0.73f, b * 0.73f, 1.0f);
-    
-    float armrestVerticalWidth = armrestWidth * 1.3f;
-    float armrestVerticalHeight = backHeight * 0.65f;
-    float armrestVerticalY = backY + backHeight/3.0f;
-    
-    drawRectangle(leftArmrestX, armrestVerticalY, armrestVerticalWidth, armrestVerticalHeight, r * 0.71f, g * 0.71f, b * 0.71f, 1.0f);
-    drawRectangle(rightArmrestX, armrestVerticalY, armrestVerticalWidth, armrestVerticalHeight, r * 0.71f, g * 0.71f, b * 0.71f, 1.0f);
+    glm::vec3 backPos(seat.x, seat.y + seatHeight * 0.5f + backHeight * 0.5f, seat.z - seatDepth * 0.45f);
+    glm::vec3 backSize(seatWidth * 0.9f, backHeight, 0.1f);
+    drawCube(backPos, backSize, glm::vec3(r * 0.7f, g * 0.7f, b * 0.7f), view, projection);
 }
 
-void Renderer::renderPerson(const Person& person) {
-    drawPerson(person.x, person.y);
+void Renderer::renderPerson(const Person& person, const glm::mat4& view, const glm::mat4& projection) {
+    glm::vec3 personPos(person.x, person.y + 0.5f, person.z);
+    glm::vec3 personSize(0.5f, 1.0f, 0.5f);
+    drawCube(personPos, personSize, glm::vec3(0.85f, 0.55f, 0.35f), view, projection);
 }
 
-void Renderer::renderScreen(float x, float y, float width, float height, float r, float g, float b) {
-    drawRectangle(x + width/2.0f, y - height/2.0f, width, height, r, g, b, 1.0f);
+void Renderer::renderScreen(float x, float y, float z, float width, float height, float depth, float r, float g, float b,
+                            const glm::mat4& view, const glm::mat4& projection) {
+    glm::vec3 screenPos(x, y, z);
+    glm::vec3 screenSize(width, height, depth);
+    drawCube(screenPos, screenSize, glm::vec3(r, g, b), view, projection);
 }
 
-void Renderer::renderDoor(float x, float y, bool isOpen, float angle) {
-    float doorWidth = 0.1f;
-    float doorHeight = 0.14f;
-    
-    float frameWidth = 0.12f;
-    float frameHeight = 0.16f;
-    drawRectangle(x, y, frameWidth, frameHeight, 0.3f, 0.3f, 0.3f, 1.0f);
-    
-    float angleRad = angle * 3.14159265359f / 180.0f;
-    float greenIntensity = 0.3f + (angle / 90.0f) * 0.7f;
-    float doorX = x - (frameWidth/2.0f - doorWidth/2.0f) * (1.0f - cos(angleRad));
-    float doorY = y;
-    
-    drawRectangle(doorX, doorY, doorWidth, doorHeight, 0.0f, greenIntensity, 0.0f, 1.0f);
-    
-    float panelHeight = doorHeight / 4.0f;
-    for (int i = 0; i < 3; i++) {
-        float panelY = doorY - doorHeight/2.0f + panelHeight * (i + 0.5f);
-        drawRectangle(doorX, panelY, doorWidth * 0.9f, 0.003f, 0.0f, greenIntensity * 0.7f, 0.0f, 1.0f);
+void Renderer::renderDoor(float x, float y, float z, bool isOpen, float angle, const glm::mat4& view, const glm::mat4& projection) {
+    glDisable(GL_BLEND);
+
+    float doorWidth = 1.5f;
+    float doorHeight = 2.5f;
+    float doorDepth = 0.1f;
+
+    glm::vec3 framePos(x, y, z);
+    glm::vec3 frameSize(0.2f, doorHeight + 0.2f, doorDepth);
+    drawCube(framePos, frameSize, glm::vec3(0.3f, 0.3f, 0.3f), view, projection);
+
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::translate(model, glm::vec3(x, y, z));
+    if (isOpen) {
+        model = glm::rotate(model, glm::radians(angle), glm::vec3(0.0f, 1.0f, 0.0f));
     }
-    
-    float handleX = doorX + doorWidth/2.0f - 0.015f;
-    float handleY = doorY;
-    drawRectangle(handleX, handleY, 0.008f, 0.015f, 0.8f, 0.8f, 0.8f, 1.0f);
+    model = glm::translate(model, glm::vec3(doorWidth / 2.0f, 0.0f, 0.0f));
+    model = glm::scale(model, glm::vec3(doorWidth, doorHeight, doorDepth));
+
+    GLint modelLoc = glGetUniformLocation(shaderProgram, "uModel");
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+
+    GLint colorLoc = glGetUniformLocation(shaderProgram, "uColor");
+    glUniform4f(colorLoc, 0.0f, 1.0f, 0.0f, 1.0f);
+
+    GLint useTexLoc = glGetUniformLocation(shaderProgram, "uUseTexture");
+    glUniform1i(useTexLoc, 0);
+
+    GLint alphaLoc = glGetUniformLocation(shaderProgram, "uAlpha");
+    glUniform1f(alphaLoc, 1.0f);
+
+    glBindVertexArray(VAO);
+    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
+
+    glEnable(GL_BLEND);
 }
 
 void Renderer::renderOverlay() {
@@ -185,35 +228,40 @@ void Renderer::renderOverlay() {
 }
 
 void Renderer::renderStudentInfo() {
+    glUseProgram(shaderProgram);
+
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     float aspect = (float)windowWidth / (float)windowHeight;
-    float infoX = -0.98f * aspect;
-    float infoY = -0.95f;
-    float infoWidth = 0.6f;
-    float infoHeight = 0.15f;
-    
-    drawRectangle(infoX + infoWidth/2.0f, infoY + infoHeight/2.0f, 
-                  infoWidth, infoHeight, 0.1f, 0.1f, 0.1f, 0.7f);
-    
+    glm::mat4 ortho = glm::ortho(-aspect, aspect, -1.0f, 1.0f, -1.0f, 1.0f);
+    glm::mat4 view = glm::mat4(1.0f);
+
+    GLint projLoc = glGetUniformLocation(shaderProgram, "uProjection");
+    glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(ortho));
+
+    GLint viewLoc = glGetUniformLocation(shaderProgram, "uView");
+    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+
+    GLint useLightingLoc = glGetUniformLocation(shaderProgram, "uUseLighting");
+    glUniform1i(useLightingLoc, false);
+
+    const float marginX = 0.06f;
+    const float marginY = 0.06f;
+    const float infoW = 0.75f;
+    const float infoH = 0.22f;
+
+    const float cx = (-aspect + marginX) + infoW * 0.5f;
+    const float cy = (-1.0f + marginY) + infoH * 0.5f;
+
+    drawRectangle(cx, cy, infoW, infoH, 0.05f, 0.05f, 0.05f, 0.35f);
     if (studentInfoTexture != 0) {
-        drawRectangleWithTexture(infoX + infoWidth/2.0f, infoY + infoHeight/2.0f, 
-                                 infoWidth * 0.95f, infoHeight * 0.95f,
-                                 studentInfoTexture, 0.95f);
-    } else {
-        float textY = infoY + infoHeight - 0.03f;
-        float lineHeight = 0.025f;
-        float startX = infoX + 0.02f;
-        
-        float lineWidth1 = 0.1f;
-        drawRectangle(startX + lineWidth1/2.0f, textY, lineWidth1, lineHeight * 0.5f, 1.0f, 1.0f, 1.0f, 0.95f);
-        
-        float textY2 = textY - lineHeight - 0.003f;
-        float lineWidth2 = 0.16f;
-        drawRectangle(startX + lineWidth2/2.0f, textY2, lineWidth2, lineHeight * 0.5f, 1.0f, 1.0f, 1.0f, 0.95f);
-        
-        float textY3 = textY2 - lineHeight - 0.003f;
-        float lineWidth3 = 0.14f;
-        drawRectangle(startX + lineWidth3/2.0f, textY3, lineWidth3, lineHeight * 0.5f, 1.0f, 1.0f, 1.0f, 0.95f);
+        drawRectangleWithTexture(cx, cy, infoW, infoH, studentInfoTexture, 0.85f);
     }
+
+    glEnable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
 }
 
 void Renderer::drawRectangle(float x, float y, float width, float height, float r, float g, float b, float a) {
@@ -284,3 +332,137 @@ void Renderer::drawPerson(float x, float y) {
     drawRectangle(x + 0.008f, y - 0.025f, 0.008f, 0.02f, 0.3f, 0.3f, 0.3f, 1.0f);
 }
 
+void Renderer::drawCube(glm::vec3 position, glm::vec3 size, glm::vec3 color, 
+                        const glm::mat4& view, const glm::mat4& projection) {
+    glUseProgram(shaderProgram);
+    
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::translate(model, position);
+    model = glm::scale(model, size);
+    
+    GLint modelLoc = glGetUniformLocation(shaderProgram, "uModel");
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+    
+    GLint colorLoc = glGetUniformLocation(shaderProgram, "uColor");
+    glUniform4f(colorLoc, color.r, color.g, color.b, 1.0f);
+    
+    GLint useTexLoc = glGetUniformLocation(shaderProgram, "uUseTexture");
+    glUniform1i(useTexLoc, 0);
+    
+    GLint alphaLoc = glGetUniformLocation(shaderProgram, "uAlpha");
+    glUniform1f(alphaLoc, 1.0f);
+    
+    glBindVertexArray(VAO);
+    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
+}
+
+void Renderer::renderHall(const Cinema& cinema, const glm::mat4& view, const glm::mat4& projection) {
+    glm::vec3 floorPos(
+        0.0f,
+        0.0f,
+        (cinema.getHallMinZ() + cinema.getHallMaxZ()) / 2.0f
+    );
+    glm::vec3 floorSize(
+        cinema.getHallMaxX() - cinema.getHallMinX(),
+        0.1f,
+        cinema.getHallMaxZ() - cinema.getHallMinZ()
+    );
+    drawCube(floorPos, floorSize, glm::vec3(0.2f, 0.2f, 0.2f), view, projection);
+
+    glm::vec3 ceilingPos(
+        0.0f,
+        cinema.getHallMaxY(),
+        (cinema.getHallMinZ() + cinema.getHallMaxZ()) / 2.0f
+    );
+    glm::vec3 ceilingSize(
+        cinema.getHallMaxX() - cinema.getHallMinX(),
+        0.1f,
+        cinema.getHallMaxZ() - cinema.getHallMinZ()
+    );
+    drawCube(ceilingPos, ceilingSize, glm::vec3(0.15f, 0.15f, 0.15f), view, projection);
+
+    glm::vec3 leftWallPos(
+        cinema.getHallMinX(),
+        cinema.getHallMaxY() / 2.0f,
+        (cinema.getHallMinZ() + cinema.getHallMaxZ()) / 2.0f
+    );
+    glm::vec3 leftWallSize(
+        0.1f,
+        cinema.getHallMaxY(),
+        cinema.getHallMaxZ() - cinema.getHallMinZ()
+    );
+    drawCube(leftWallPos, leftWallSize, glm::vec3(0.25f, 0.25f, 0.25f), view, projection);
+
+    glm::vec3 rightWallPos(
+        cinema.getHallMaxX(),
+        cinema.getHallMaxY() / 2.0f,
+        (cinema.getHallMinZ() + cinema.getHallMaxZ()) / 2.0f
+    );
+    glm::vec3 rightWallSize(
+        0.1f,
+        cinema.getHallMaxY(),
+        cinema.getHallMaxZ() - cinema.getHallMinZ()
+    );
+    drawCube(rightWallPos, rightWallSize, glm::vec3(0.25f, 0.25f, 0.25f), view, projection);
+
+    float wallTopHeight =
+        cinema.getHallMaxY() - (cinema.getScreenY() + cinema.getScreenHeight() / 2.0f);
+    if (wallTopHeight > 0.1f) {
+        glm::vec3 backWallTopPos(
+            0.0f,
+            cinema.getScreenY() + cinema.getScreenHeight() / 2.0f + wallTopHeight / 2.0f,
+            cinema.getHallMaxZ()
+        );
+        glm::vec3 backWallTopSize(
+            cinema.getHallMaxX() - cinema.getHallMinX(),
+            wallTopHeight,
+            0.1f
+        );
+        drawCube(backWallTopPos, backWallTopSize, glm::vec3(0.25f, 0.25f, 0.25f), view, projection);
+    }
+
+    float wallBottomHeight =
+        cinema.getScreenY() - cinema.getScreenHeight() / 2.0f;
+    if (wallBottomHeight > 0.1f) {
+        glm::vec3 backWallBottomPos(
+            0.0f,
+            wallBottomHeight / 2.0f,
+            cinema.getHallMaxZ()
+        );
+        glm::vec3 backWallBottomSize(
+            cinema.getHallMaxX() - cinema.getHallMinX(),
+            wallBottomHeight,
+            0.1f
+        );
+        drawCube(backWallBottomPos, backWallBottomSize, glm::vec3(0.25f, 0.25f, 0.25f), view, projection);
+    }
+
+    if (cinema.getScreenX() - cinema.getScreenWidth() / 2.0f > cinema.getHallMinX()) {
+        glm::vec3 backWallLeftPos(
+            (cinema.getHallMinX() + cinema.getScreenX() - cinema.getScreenWidth() / 2.0f) / 2.0f,
+            cinema.getScreenY(),
+            cinema.getHallMaxZ()
+        );
+        glm::vec3 backWallLeftSize(
+            cinema.getScreenX() - cinema.getScreenWidth() / 2.0f - cinema.getHallMinX(),
+            cinema.getScreenHeight(),
+            0.1f
+        );
+        drawCube(backWallLeftPos, backWallLeftSize, glm::vec3(0.25f, 0.25f, 0.25f), view, projection);
+    }
+
+    if (cinema.getScreenX() + cinema.getScreenWidth() / 2.0f < cinema.getHallMaxX()) {
+        glm::vec3 backWallRightPos(
+            (cinema.getHallMaxX() + cinema.getScreenX() + cinema.getScreenWidth() / 2.0f) / 2.0f,
+            cinema.getScreenY(),
+            cinema.getHallMaxZ()
+        );
+        glm::vec3 backWallRightSize(
+            cinema.getHallMaxX() - (cinema.getScreenX() + cinema.getScreenWidth() / 2.0f),
+            cinema.getScreenHeight(),
+            0.1f
+        );
+        drawCube(backWallRightPos, backWallRightSize, glm::vec3(0.25f, 0.25f, 0.25f), view, projection);
+    }
+}

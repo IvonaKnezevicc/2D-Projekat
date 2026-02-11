@@ -1,4 +1,4 @@
-#include "../Header/Cinema.h"
+﻿#include "../Header/Cinema.h"
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <algorithm>
@@ -6,32 +6,44 @@
 
 Cinema::Cinema(int windowWidth, int windowHeight)
     : windowWidth(windowWidth), windowHeight(windowHeight),
-      state(CinemaState::RESERVATION), doorOpen(false), doorAngle(0.0f), showDarkOverlay(true),
+      state(CinemaState::RESERVATION), doorOpen(false), doorAngle(0.0f), showDarkOverlay(false),
       screenColorR(1.0f), screenColorG(1.0f), screenColorB(1.0f),
       frameCount(0), filmDurationFrames(1500),
       rng(std::random_device{}())
 {
-    float aspect = (float)windowWidth / (float)windowHeight;
-    doorX = -0.98f * aspect;
-    exitX = doorX;
-    exitY = doorY;
+    hallWidth = 20.0f;
+    hallHeight = 8.0f;
+    hallDepth = 15.0f;
     
-    screenX = -0.75f * aspect;
-    screenY = 0.9f;
-    screenWidth = 1.5f * aspect;
-    screenHeight = 0.2f;
+    hallMinX = -hallWidth / 2.0f;
+    hallMaxX = hallWidth / 2.0f;
+    hallMinY = 0.0f;
+    hallMaxY = hallHeight;
+    hallMinZ = -hallDepth;
+    hallMaxZ = 0.0f;
+    
+    screenX = 0.0f;
+    screenY = hallHeight * 0.7f;
+    screenZ = hallMaxZ;
+    screenWidth = hallWidth * 0.8f;
+    screenHeight = hallHeight * 0.4f;
+    screenDepth = 0.1f;
+    
+    float doorHeight = 2.5f;
+    float doorWidth = 1.5f;
+    
+    doorX = hallMinX + doorWidth / 2.0f;
+    doorY = doorHeight / 2.0f;
+    doorZ = hallMaxZ;
+    
+    float personHeight = 1.0f;
+    float personStartY = personHeight / 2.0f;
+    
+    exitX = doorX;
+    exitY = personStartY;
+    exitZ = doorZ;
     
     initializeSeats();
-    
-    if (!seats.empty()) {
-        float firstRowY = seats[0].y;
-        float screenBottomY = screenY - screenHeight/2.0f;
-        doorY = (screenBottomY + firstRowY) / 2.0f;
-        exitY = doorY;
-    } else {
-        doorY = 0.7f;
-        exitY = doorY;
-    }
 }
 
 Cinema::~Cinema() {
@@ -40,25 +52,31 @@ Cinema::~Cinema() {
 void Cinema::initializeSeats() {
     seats.clear();
     
-    int numRows = 8;
-    int seatsPerRow[] = {8, 10, 12, 14, 16, 18, 20, 22};
+    int numRows = 10;
+    int seatsPerRow[] = {6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
     
-    float startY = 0.5f;
-    float rowSpacing = 0.13f;
-    float seatWidth = 0.06f;
-    float uniformSpacing = 0.06f;
+    float seatWidth = 0.6f;
+    float seatDepth = 0.6f;
+    float seatHeight = 0.4f;
+    float seatSpacing = 0.1f;
+    float rowSpacing = 1.0f;
+    float stepHeight = 0.15f;
+    
+    float startZ = hallMaxZ - 2.0f;
+    float startY = seatHeight / 2.0f + 0.05f;
     
     for (int row = 0; row < numRows; row++) {
         int numSeats = seatsPerRow[row];
         
-        float totalWidth = numSeats * seatWidth + (numSeats - 1) * uniformSpacing;
+        float y = startY + row * stepHeight;
+        float z = startZ - row * rowSpacing;
+        
+        float totalWidth = numSeats * seatWidth + (numSeats - 1) * seatSpacing;
         float startX = -totalWidth / 2.0f;
         
-        float y = startY - row * rowSpacing;
-        
         for (int col = 0; col < numSeats; col++) {
-            float x = startX + col * (seatWidth + uniformSpacing) + seatWidth / 2.0f;
-            seats.push_back(Seat(x, y, row, col));
+            float x = startX + col * (seatWidth + seatSpacing) + seatWidth / 2.0f;
+            seats.push_back(Seat(x, y, z, row, col));
         }
     }
 }
@@ -127,7 +145,7 @@ void Cinema::update() {
                     size_t i = sortedIndices[idx].second;
                     people[i].currentFrame = 0;
                     people[i].delayFrames = idx * 8;
-                    people[i].startExiting(exitX, exitY);
+                    people[i].startExiting(exitX, exitY, exitZ);
                 }
             }
             break;
@@ -281,8 +299,13 @@ void Cinema::createPeople() {
     
     std::shuffle(availableSeats.begin(), availableSeats.end(), rng);
     
+    // Pozicija za ljude koji ulaze - na podu, blizu vrata
+    // Ljudi su visoki 1.0f (centar na 0.5f), pa počinju na podu
+    float personHeight = 1.0f;
+    float personStartY = personHeight / 2.0f;  // Centar osobe na 0.5m od poda
+    
     for (int i = 0; i < numPeople && i < availableSeats.size(); i++) {
-        Person person(doorX, doorY, 0.008f, i * 8);
+        Person person(doorX, personStartY, doorZ, 0.03f, i * 8);  // Ljudi počinju na podu (ubrzano kretanje)
         person.setTarget(availableSeats[i]);
         people.push_back(person);
     }

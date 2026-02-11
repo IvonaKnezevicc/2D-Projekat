@@ -34,10 +34,21 @@ public:
     
     float getDoorX() const { return doorX; }
     float getDoorY() const { return doorY; }
+    float getDoorZ() const { return doorZ; }
     float getScreenX() const { return screenX; }
     float getScreenY() const { return screenY; }
+    float getScreenZ() const { return screenZ; }
     float getScreenWidth() const { return screenWidth; }
     float getScreenHeight() const { return screenHeight; }
+    float getScreenDepth() const { return screenDepth; }
+    
+    // Getteri za dimenzije sale
+    float getHallMinX() const { return hallMinX; }
+    float getHallMaxX() const { return hallMaxX; }
+    float getHallMinY() const { return hallMinY; }
+    float getHallMaxY() const { return hallMaxY; }
+    float getHallMinZ() const { return hallMinZ; }
+    float getHallMaxZ() const { return hallMaxZ; }
     
 private:
     int windowWidth, windowHeight;
@@ -53,9 +64,13 @@ private:
     int frameCount;
     int filmDurationFrames;
     
-    float doorX, doorY;
-    float screenX, screenY, screenWidth, screenHeight;
-    float exitX, exitY;
+    float doorX, doorY, doorZ;
+    float screenX, screenY, screenZ, screenWidth, screenHeight, screenDepth;
+    float exitX, exitY, exitZ;
+    
+    // Dimenzije sale u 3D prostoru
+    float hallWidth, hallHeight, hallDepth;
+    float hallMinX, hallMaxX, hallMinY, hallMaxY, hallMinZ, hallMaxZ;
     
     std::mt19937 rng;
     

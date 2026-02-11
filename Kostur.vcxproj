@@ -130,6 +130,7 @@
     <ClCompile Include="Source\Renderer.cpp" />
     <ClCompile Include="Source\Person.cpp" />
     <ClCompile Include="Source\Seat.cpp" />
+    <ClCompile Include="Source\Camera.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Header\stb_image.h" />
@@ -138,6 +139,7 @@
     <ClInclude Include="Header\Person.h" />
     <ClInclude Include="Header\Cinema.h" />
     <ClInclude Include="Header\Renderer.h" />
+    <ClInclude Include="Header\Camera.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -146,6 +148,7 @@
   <ImportGroup Label="ExtensionTargets">
     <Import Project="packages\glew-2.2.0.2.2.0.1\build\native\glew-2.2.0.targets" Condition="Exists('packages\glew-2.2.0.2.2.0.1\build\native\glew-2.2.0.targets')" />
     <Import Project="packages\glfw.3.4.0\build\native\glfw.targets" Condition="Exists('packages\glfw.3.4.0\build\native\glfw.targets')" />
+    <Import Project="packages\glm.1.0.2\build\native\glm.targets" Condition="Exists('packages\glm.1.0.2\build\native\glm.targets')" />
   </ImportGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
