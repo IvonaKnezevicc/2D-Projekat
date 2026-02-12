@@ -5,6 +5,7 @@
 #include <sstream>
 #include <iostream>
 #include <cmath>
+#include <glm/glm.hpp>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "../Header/stb_image.h"
@@ -274,4 +275,204 @@ GLFWcursor* createCameraCursor() {
     int hotspotY = centerY;
     
     return glfwCreateCursor(&image, hotspotX, hotspotY);
+}
+
+bool loadOBJModel(const char* filePath, ModelData& outModel) {
+    std::ifstream file(filePath);
+    if (!file.is_open()) {
+        std::cout << "Greska: Ne mogu da otvorim OBJ fajl: " << filePath << std::endl;
+        return false;
+    }
+    
+    std::vector<glm::vec3> tempVertices;
+    std::vector<glm::vec2> tempUVs;
+    std::vector<glm::vec3> tempNormals;
+    std::vector<unsigned int> vertexIndices, uvIndices, normalIndices;
+    
+    std::string line;
+    std::string mtlPath;
+    
+    while (std::getline(file, line)) {
+        if (line.empty() || line[0] == '#') continue;
+        
+        std::istringstream iss(line);
+        std::string prefix;
+        iss >> prefix;
+        
+        if (prefix == "v") {
+            glm::vec3 vertex;
+            iss >> vertex.x >> vertex.y >> vertex.z;
+            tempVertices.push_back(vertex);
+        }
+        else if (prefix == "vt") {
+            glm::vec2 uv;
+            iss >> uv.x >> uv.y;
+            tempUVs.push_back(uv);
+        }
+        else if (prefix == "vn") {
+            glm::vec3 normal;
+            iss >> normal.x >> normal.y >> normal.z;
+            tempNormals.push_back(normal);
+        }
+        else if (prefix == "f") {
+            std::vector<std::string> faceVertices;
+            std::string vertex;
+            while (iss >> vertex) {
+                faceVertices.push_back(vertex);
+            }
+            
+            if (faceVertices.size() < 3) continue;
+            
+            auto processVertex = [&](const std::string& vertexStr) {
+                std::stringstream vss(vertexStr);
+                std::string v, vt, vn;
+                std::getline(vss, v, '/');
+                std::getline(vss, vt, '/');
+                std::getline(vss, vn, '/');
+                
+                int vi = std::stoi(v) - 1;
+                vertexIndices.push_back(vi);
+                
+                if (!vt.empty()) {
+                    int vti = std::stoi(vt) - 1;
+                    uvIndices.push_back(vti);
+                }
+                
+                if (!vn.empty()) {
+                    int vni = std::stoi(vn) - 1;
+                    normalIndices.push_back(vni);
+                }
+            };
+            
+            // Triangulacija: ako je quad, podeli na 2 trougla
+            processVertex(faceVertices[0]);
+            processVertex(faceVertices[1]);
+            processVertex(faceVertices[2]);
+            
+            if (faceVertices.size() == 4) {
+                processVertex(faceVertices[0]);
+                processVertex(faceVertices[2]);
+                processVertex(faceVertices[3]);
+            }
+        }
+        else if (prefix == "mtllib") {
+            iss >> mtlPath;
+        }
+    }
+    
+    file.close();
+    
+    bool hasUVs = !tempUVs.empty() && !uvIndices.empty();
+    bool hasNormals = !tempNormals.empty() && !normalIndices.empty();
+    
+    outModel.vertices.clear();
+    outModel.indices.clear();
+    
+    std::vector<unsigned int> uniqueIndices;
+    std::vector<glm::vec3> uniqueVertices;
+    std::vector<glm::vec2> uniqueUVs;
+    std::vector<glm::vec3> uniqueNormals;
+    
+    for (size_t i = 0; i < vertexIndices.size(); i++) {
+        unsigned int vi = vertexIndices[i];
+        
+        if (vi >= tempVertices.size()) continue;
+        
+        glm::vec3 vertex = tempVertices[vi];
+        glm::vec2 uv = hasUVs && i < uvIndices.size() && uvIndices[i] < tempUVs.size() 
+                       ? tempUVs[uvIndices[i]] : glm::vec2(0.0f, 0.0f);
+        glm::vec3 normal = hasNormals && i < normalIndices.size() && normalIndices[i] < tempNormals.size()
+                          ? tempNormals[normalIndices[i]] : glm::vec3(0.0f, 1.0f, 0.0f);
+        
+        bool found = false;
+        unsigned int index = 0;
+        
+        for (size_t j = 0; j < uniqueVertices.size(); j++) {
+            if (uniqueVertices[j] == vertex && 
+                (!hasUVs || uniqueUVs[j] == uv) &&
+                (!hasNormals || uniqueNormals[j] == normal)) {
+                found = true;
+                index = (unsigned int)j;
+                break;
+            }
+        }
+        
+        if (!found) {
+            uniqueVertices.push_back(vertex);
+            uniqueUVs.push_back(uv);
+            uniqueNormals.push_back(normal);
+            index = (unsigned int)uniqueVertices.size() - 1;
+        }
+        
+        outModel.indices.push_back(index);
+    }
+    
+    for (size_t i = 0; i < uniqueVertices.size(); i++) {
+        outModel.vertices.push_back(uniqueVertices[i].x);
+        outModel.vertices.push_back(uniqueVertices[i].y);
+        outModel.vertices.push_back(uniqueVertices[i].z);
+        
+        if (hasNormals) {
+            outModel.vertices.push_back(uniqueNormals[i].x);
+            outModel.vertices.push_back(uniqueNormals[i].y);
+            outModel.vertices.push_back(uniqueNormals[i].z);
+        } else {
+            outModel.vertices.push_back(0.0f);
+            outModel.vertices.push_back(1.0f);
+            outModel.vertices.push_back(0.0f);
+        }
+        
+        if (hasUVs) {
+            outModel.vertices.push_back(uniqueUVs[i].x);
+            outModel.vertices.push_back(uniqueUVs[i].y);
+        } else {
+            outModel.vertices.push_back(0.0f);
+            outModel.vertices.push_back(0.0f);
+        }
+    }
+    
+    if (!mtlPath.empty()) {
+        std::string objDir = std::string(filePath);
+        size_t lastSlash = objDir.find_last_of("/\\");
+        if (lastSlash != std::string::npos) {
+            objDir = objDir.substr(0, lastSlash + 1);
+        } else {
+            objDir = "";
+        }
+        outModel.texturePath = objDir + mtlPath;
+        
+        std::ifstream mtlFile(outModel.texturePath);
+        if (mtlFile.is_open()) {
+            std::string mtlLine;
+            while (std::getline(mtlFile, mtlLine)) {
+                std::istringstream mtlIss(mtlLine);
+                std::string mtlPrefix;
+                mtlIss >> mtlPrefix;
+                
+                if (mtlPrefix == "map_Kd" || mtlPrefix == "map_Ka") {
+                    std::string texPath;
+                    mtlIss >> texPath;
+                    size_t mtlLastSlash = outModel.texturePath.find_last_of("/\\");
+                    std::string mtlDir = mtlLastSlash != std::string::npos 
+                                        ? outModel.texturePath.substr(0, mtlLastSlash + 1) 
+                                        : "";
+                    outModel.texturePath = mtlDir + texPath;
+                    break;
+                }
+            }
+            mtlFile.close();
+        }
+    }
+    
+    std::cout << "Uspesno ucitano " << outModel.vertices.size() / 8 << " verteksa, " 
+              << outModel.indices.size() / 3 << " trouglova iz " << filePath << std::endl;
+    std::cout << "Total vertices array size: " << outModel.vertices.size() << ", Total indices: " << outModel.indices.size() << std::endl;
+    std::cout << "Has UVs: " << (hasUVs ? "YES" : "NO") << ", Has Normals: " << (hasNormals ? "YES" : "NO") << std::endl;
+    
+    if (outModel.vertices.empty() || outModel.indices.empty()) {
+        std::cout << "ERROR: Model data is empty!" << std::endl;
+        return false;
+    }
+    
+    return true;
 }

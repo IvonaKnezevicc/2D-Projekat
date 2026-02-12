@@ -48,7 +48,7 @@ Cinema::Cinema(int windowWidth, int windowHeight)
     
     exitX = doorX - 0.02f;
     exitY = personStartY;
-    exitZ = doorZ;
+    exitZ = doorZ - 0.25f;
     
     initializeSeats();
 }
@@ -69,9 +69,9 @@ void Cinema::initializeSeats() {
     float seatWidth = 0.6f;
     float seatDepth = 0.6f;
     float seatHeight = 0.4f;
-    float seatSpacing = 0.1f;
+    float seatSpacing = 0.2f;
     float rowSpacing = 1.0f;
-    float stepHeight = 0.15f;
+    float stepHeight = 0.22f;
     
     float startZ = hallMaxZ - 2.0f;
     float startY = seatHeight / 2.0f + 0.05f;
@@ -367,8 +367,7 @@ void Cinema::createPeople() {
     int totalSeats = countReservedAndBought();
     if (totalSeats == 0) return;
     
-    std::uniform_int_distribution<int> peopleDist(1, totalSeats);
-    int numPeople = peopleDist(rng);
+    int numPeople = totalSeats;
     
     std::vector<Seat*> availableSeats;
     for (auto& seat : seats) {
@@ -383,7 +382,8 @@ void Cinema::createPeople() {
     float personStartY = personHeight / 2.0f;
     
     for (int i = 0; i < numPeople && i < availableSeats.size(); i++) {
-        Person person(exitX, personStartY, exitZ, 0.03f, i * 8);
+        int modelIndex = i % 11;
+        Person person(exitX, personStartY, exitZ, 0.03f, i * 8, modelIndex);
         person.setTarget(availableSeats[i], *this);
         people.push_back(person);
     }

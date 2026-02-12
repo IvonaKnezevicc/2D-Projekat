@@ -15,8 +15,9 @@ struct Person {
     Seat* assignedSeat;
     int delayFrames;
     int currentFrame;
+    int modelIndex;
     
-    Person(float startX, float startY, float startZ = 0.0f, float speed = 0.008f, int delayFrames = 0);
+    Person(float startX, float startY, float startZ = 0.0f, float speed = 0.008f, int delayFrames = 0, int modelIndex = 0);
     
     void setTarget(Seat* seat, const Cinema& cinema);
     void update();

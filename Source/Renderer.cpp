@@ -8,6 +8,7 @@
 #include <iostream>
 #include <vector>
 #include <cstdio>
+#include <limits>
 
 Renderer::Renderer(int windowWidth, int windowHeight)
     : windowWidth(windowWidth), windowHeight(windowHeight), studentInfoTexture(0)
@@ -37,6 +38,155 @@ Renderer::Renderer(int windowWidth, int windowHeight)
             filmTextures.push_back(texture);
         }
     }
+    
+    for (int i = 1; i <= 15; i++) {
+        char objPath[256];
+        sprintf_s(objPath, "Resources/models/human_%02d.obj", i);
+        
+        ModelData modelData;
+        if (loadOBJModel(objPath, modelData)) {
+            Model model;
+            
+            if (!modelData.vertices.empty() && !modelData.indices.empty()) {
+                glGenVertexArrays(1, &model.VAO);
+                glGenBuffers(1, &model.VBO);
+                glGenBuffers(1, &model.EBO);
+                
+                glBindVertexArray(model.VAO);
+                
+                glBindBuffer(GL_ARRAY_BUFFER, model.VBO);
+                glBufferData(GL_ARRAY_BUFFER, modelData.vertices.size() * sizeof(float), 
+                            modelData.vertices.data(), GL_STATIC_DRAW);
+                
+                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, model.EBO);
+                glBufferData(GL_ELEMENT_ARRAY_BUFFER, modelData.indices.size() * sizeof(unsigned int),
+                            modelData.indices.data(), GL_STATIC_DRAW);
+                
+                int stride = 8 * sizeof(float);
+                glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
+                glEnableVertexAttribArray(0);
+                
+                glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, (void*)(3 * sizeof(float)));
+                glEnableVertexAttribArray(1);
+                
+                glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void*)(6 * sizeof(float)));
+                glEnableVertexAttribArray(2);
+                
+                glBindVertexArray(0);
+                
+                model.vertices = modelData.vertices;
+                model.indices = modelData.indices;
+
+                float minX = std::numeric_limits<float>::max();
+                float minY = std::numeric_limits<float>::max();
+                float minZ = std::numeric_limits<float>::max();
+                float maxX = std::numeric_limits<float>::lowest();
+                float maxY = std::numeric_limits<float>::lowest();
+                float maxZ = std::numeric_limits<float>::lowest();
+                for (size_t v = 0; v + 2 < modelData.vertices.size(); v += 8) {
+                    float x = modelData.vertices[v + 0];
+                    float y = modelData.vertices[v + 1];
+                    float z = modelData.vertices[v + 2];
+                    if (x < minX) minX = x;
+                    if (y < minY) minY = y;
+                    if (z < minZ) minZ = z;
+                    if (x > maxX) maxX = x;
+                    if (y > maxY) maxY = y;
+                    if (z > maxZ) maxZ = z;
+                }
+                float height = maxY - minY;
+                if (height > 0.0001f) {
+                    model.normalizeScale = 1.0f / height;
+                } else {
+                    model.normalizeScale = 1.0f;
+                }
+                model.localOffset = glm::vec3(-(minX + maxX) * 0.5f, -minY, -(minZ + maxZ) * 0.5f);
+                
+                if (!modelData.texturePath.empty()) {
+                    model.texture = loadImageToTexture(modelData.texturePath.c_str());
+                    model.hasTexture = (model.texture != 0);
+                }
+                
+                humanoidModels.push_back(model);
+                std::cout << "Ucitan humanoidni model " << i << std::endl;
+            }
+        } else {
+            sprintf_s(objPath, "Resources/models/human_%d.obj", i);
+            ModelData modelData2;
+            if (loadOBJModel(objPath, modelData2)) {
+                Model model;
+                
+                if (!modelData2.vertices.empty() && !modelData2.indices.empty()) {
+                    glGenVertexArrays(1, &model.VAO);
+                    glGenBuffers(1, &model.VBO);
+                    glGenBuffers(1, &model.EBO);
+                    
+                    glBindVertexArray(model.VAO);
+                    
+                    glBindBuffer(GL_ARRAY_BUFFER, model.VBO);
+                    glBufferData(GL_ARRAY_BUFFER, modelData2.vertices.size() * sizeof(float), 
+                                modelData2.vertices.data(), GL_STATIC_DRAW);
+                    
+                    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, model.EBO);
+                    glBufferData(GL_ELEMENT_ARRAY_BUFFER, modelData2.indices.size() * sizeof(unsigned int),
+                                modelData2.indices.data(), GL_STATIC_DRAW);
+                    
+                    int stride = 8 * sizeof(float);
+                    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
+                    glEnableVertexAttribArray(0);
+                    
+                    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, (void*)(3 * sizeof(float)));
+                    glEnableVertexAttribArray(1);
+                    
+                    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void*)(6 * sizeof(float)));
+                    glEnableVertexAttribArray(2);
+                    
+                    glBindBuffer(GL_ARRAY_BUFFER, 0);
+                    glBindVertexArray(0);
+                    
+                    model.vertices = modelData2.vertices;
+                    model.indices = modelData2.indices;
+
+                    float minX = std::numeric_limits<float>::max();
+                    float minY = std::numeric_limits<float>::max();
+                    float minZ = std::numeric_limits<float>::max();
+                    float maxX = std::numeric_limits<float>::lowest();
+                    float maxY = std::numeric_limits<float>::lowest();
+                    float maxZ = std::numeric_limits<float>::lowest();
+                    for (size_t v = 0; v + 2 < modelData2.vertices.size(); v += 8) {
+                        float x = modelData2.vertices[v + 0];
+                        float y = modelData2.vertices[v + 1];
+                        float z = modelData2.vertices[v + 2];
+                        if (x < minX) minX = x;
+                        if (y < minY) minY = y;
+                        if (z < minZ) minZ = z;
+                        if (x > maxX) maxX = x;
+                        if (y > maxY) maxY = y;
+                        if (z > maxZ) maxZ = z;
+                    }
+                    float height = maxY - minY;
+                    if (height > 0.0001f) {
+                        model.normalizeScale = 1.0f / height;
+                    } else {
+                        model.normalizeScale = 1.0f;
+                    }
+                    model.localOffset = glm::vec3(-(minX + maxX) * 0.5f, -minY, -(minZ + maxZ) * 0.5f);
+                    
+                    if (!modelData2.texturePath.empty()) {
+                        model.texture = loadImageToTexture(modelData2.texturePath.c_str());
+                        model.hasTexture = (model.texture != 0);
+                    }
+                    
+                    humanoidModels.push_back(model);
+                    std::cout << "Ucitan humanoidni model " << i << std::endl;
+                }
+            }
+        }
+    }
+
+    if (humanoidModels.empty()) {
+        std::cout << "Upozorenje: Nisu ucitani humanoidni modeli. Koristice se kocke umesto modela." << std::endl;
+    }
 }
 
 Renderer::~Renderer() {
@@ -46,6 +196,17 @@ Renderer::~Renderer() {
     glDeleteProgram(shaderProgram);
     if (studentInfoTexture != 0) {
         glDeleteTextures(1, &studentInfoTexture);
+    }
+    
+    for (auto& model : humanoidModels) {
+        if (model.VAO != 0) {
+            glDeleteVertexArrays(1, &model.VAO);
+            glDeleteBuffers(1, &model.VBO);
+            glDeleteBuffers(1, &model.EBO);
+        }
+        if (model.texture != 0) {
+            glDeleteTextures(1, &model.texture);
+        }
     }
 }
 
@@ -193,6 +354,9 @@ void Renderer::renderSeat(const Seat& seat, const glm::mat4& view, const glm::ma
     const float seatDepth = 0.6f;
     const float seatHeight = 0.4f;
     const float backHeight = 0.8f;
+    const float armrestWidth = 0.08f;
+    const float armrestHeight = 0.28f;
+    const float armrestDepth = 0.52f;
     
     glm::vec3 basePos(seat.x, seat.y, seat.z);
     glm::vec3 baseSize(seatWidth, seatHeight, seatDepth);
@@ -201,12 +365,107 @@ void Renderer::renderSeat(const Seat& seat, const glm::mat4& view, const glm::ma
     glm::vec3 backPos(seat.x, seat.y + seatHeight * 0.5f + backHeight * 0.5f, seat.z - seatDepth * 0.45f);
     glm::vec3 backSize(seatWidth * 0.9f, backHeight, 0.1f);
     drawCube(backPos, backSize, glm::vec3(r * 0.7f, g * 0.7f, b * 0.7f), view, projection);
+
+    glm::vec3 leftArmPos(
+        seat.x - seatWidth * 0.5f - armrestWidth * 0.5f,
+        seat.y + armrestHeight * 0.5f,
+        seat.z
+    );
+    glm::vec3 rightArmPos(
+        seat.x + seatWidth * 0.5f + armrestWidth * 0.5f,
+        seat.y + armrestHeight * 0.5f,
+        seat.z
+    );
+    glm::vec3 armSize(armrestWidth, armrestHeight, armrestDepth);
+    glm::vec3 armColor(r * 0.6f, g * 0.6f, b * 0.6f);
+    drawCube(leftArmPos, armSize, armColor, view, projection);
+    drawCube(rightArmPos, armSize, armColor, view, projection);
 }
 
 void Renderer::renderPerson(const Person& person, const glm::mat4& view, const glm::mat4& projection) {
-    glm::vec3 personPos(person.x, person.y + 0.5f, person.z);
-    glm::vec3 personSize(0.5f, 1.0f, 0.5f);
-    drawCube(personPos, personSize, glm::vec3(0.85f, 0.55f, 0.35f), view, projection);
+    if (!humanoidModels.empty()) {
+        int safeIndex = person.modelIndex % (int)humanoidModels.size();
+        if (safeIndex < 0) safeIndex += (int)humanoidModels.size();
+
+        float yawDegrees = 180.0f;
+        if (person.isSeated) {
+            yawDegrees = 0.0f;
+        } else if (person.isExiting) {
+            yawDegrees = 0.0f;
+        }
+
+        const Model& selectedModel = humanoidModels[safeIndex];
+        const float targetHeight = 1.0f;
+        float uniformScale = targetHeight * selectedModel.normalizeScale;
+
+        glm::mat4 modelMatrix = glm::mat4(1.0f);
+        modelMatrix = glm::translate(modelMatrix, glm::vec3(person.x, person.y, person.z));
+        modelMatrix = glm::rotate(modelMatrix, glm::radians(yawDegrees), glm::vec3(0.0f, 1.0f, 0.0f));
+        modelMatrix = glm::scale(modelMatrix, glm::vec3(uniformScale, uniformScale, uniformScale));
+        modelMatrix = glm::translate(modelMatrix, selectedModel.localOffset);
+        renderModel(selectedModel, modelMatrix, view, projection);
+    } else {
+        glm::vec3 personPos(person.x, person.y + 0.5f, person.z);
+        glm::vec3 personSize(0.5f, 1.0f, 0.5f);
+        drawCube(personPos, personSize, glm::vec3(0.85f, 0.55f, 0.35f), view, projection);
+    }
+}
+
+void Renderer::renderModel(const Model& model, const glm::mat4& modelMatrix, const glm::mat4& view, const glm::mat4& projection) {
+    if (model.VAO == 0 || model.indices.empty()) return;
+    
+    glUseProgram(shaderProgram);
+    
+    GLint modelLoc = glGetUniformLocation(shaderProgram, "uModel");
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelMatrix));
+    
+    GLint viewLoc = glGetUniformLocation(shaderProgram, "uView");
+    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+    
+    GLint projLoc = glGetUniformLocation(shaderProgram, "uProjection");
+    glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
+    
+    GLint useTexLoc = glGetUniformLocation(shaderProgram, "uUseTexture");
+    GLint colorLoc = glGetUniformLocation(shaderProgram, "uColor");
+    if (model.hasTexture && model.texture != 0) {
+        glUniform1i(useTexLoc, 1);
+        glUniform4f(colorLoc, 1.0f, 1.0f, 1.0f, 1.0f);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, model.texture);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    } else {
+        glUniform1i(useTexLoc, 0);
+        glUniform4f(colorLoc, 0.75f, 0.75f, 0.80f, 1.0f);
+    }
+    
+    GLint alphaLoc = glGetUniformLocation(shaderProgram, "uAlpha");
+    glUniform1f(alphaLoc, 1.0f);
+    
+    GLint useLightingLoc = glGetUniformLocation(shaderProgram, "uUseLighting");
+    glUniform1i(useLightingLoc, 0);
+    
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+    glDepthMask(GL_TRUE);
+    glDisable(GL_CULL_FACE);
+    
+    GLboolean wasBlendEnabled = glIsEnabled(GL_BLEND);
+    glDisable(GL_BLEND);
+    
+    glBindVertexArray(model.VAO);
+    glDrawElements(GL_TRIANGLES, (GLsizei)model.indices.size(), GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
+    
+    if (wasBlendEnabled) {
+        glEnable(GL_BLEND);
+    }
+
+    if (model.hasTexture && model.texture != 0) {
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
 }
 
 void Renderer::renderScreen(float x, float y, float z, float width, float height, float depth, float r, float g, float b,
@@ -497,7 +756,7 @@ void Renderer::renderHall(const Cinema& cinema, const glm::mat4& view, const glm
     float seatEndZ = seatStartZ - 9.0f * 1.0f;
     
     float seatHeight = 0.4f;
-    float stepHeight = 0.15f;
+    float stepHeight = 0.22f;
     float startY = seatHeight / 2.0f + 0.05f;
     int numRows = 10;
     float lastStairY = startY + (numRows - 1) * stepHeight;
@@ -654,7 +913,7 @@ void Renderer::renderHall(const Cinema& cinema, const glm::mat4& view, const glm
 void Renderer::renderStairs(const Cinema& cinema, const glm::mat4& view, const glm::mat4& projection) {
     int numRows = 10;
     float seatHeight = 0.4f;
-    float stepHeight = 0.15f;
+    float stepHeight = 0.22f;
     float startY = seatHeight / 2.0f + 0.05f;
     float startZ = cinema.getHallMaxZ() - 2.0f;
     float rowSpacing = 1.0f;

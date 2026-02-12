@@ -143,11 +143,16 @@ int main()
     Cinema cinema(windowWidth, windowHeight);
     Renderer renderer(windowWidth, windowHeight);
     
+    glm::vec3 startCameraPos(
+        cinema.getHallMaxX() - 1.0f,
+        cinema.getHallMaxY() - 1.0f,
+        cinema.getHallMinZ() + 1.0f
+    );
     Camera camera(
-        glm::vec3(0.0f, 2.0f, -12.0f),
+        startCameraPos,
         glm::vec3(0.0f, 1.0f, 0.0f),
-        0.0f,
-        -12.0f
+        145.0f,
+        -25.0f
     );
     g_camera = &camera;
     

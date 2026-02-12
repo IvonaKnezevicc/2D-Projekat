@@ -9,6 +9,18 @@
 #include "Person.h"
 #include "Camera.h"
 
+struct Model {
+    std::vector<float> vertices;
+    std::vector<unsigned int> indices;
+    unsigned int VAO, VBO, EBO;
+    unsigned int texture;
+    bool hasTexture;
+    float normalizeScale;
+    glm::vec3 localOffset;
+    
+    Model() : VAO(0), VBO(0), EBO(0), texture(0), hasTexture(false), normalizeScale(1.0f), localOffset(0.0f) {}
+};
+
 class Renderer {
 public:
     Renderer(int windowWidth, int windowHeight);
@@ -17,6 +29,7 @@ public:
     void render(const Cinema& cinema, const Camera& camera, int windowWidth, int windowHeight);
     void renderSeat(const Seat& seat, const glm::mat4& view, const glm::mat4& projection);
     void renderPerson(const Person& person, const glm::mat4& view, const glm::mat4& projection);
+    void renderModel(const Model& model, const glm::mat4& modelMatrix, const glm::mat4& view, const glm::mat4& projection);
     void renderScreen(float x, float y, float z, float width, float height, float depth, float r, float g, float b, const glm::mat4& view, const glm::mat4& projection);
     void renderScreenWithTexture(float x, float y, float z, float width, float height, float depth, unsigned int texture, const glm::mat4& view, const glm::mat4& projection);
     void renderDoor(float x, float y, float z, bool isOpen, float angle, const glm::mat4& view, const glm::mat4& projection);
@@ -36,6 +49,7 @@ private:
     unsigned int VAO, VBO, EBO;
     unsigned int studentInfoTexture;
     std::vector<unsigned int> filmTextures;
+    std::vector<Model> humanoidModels;
     
     void setupBuffers();
     void setupShader();
@@ -45,4 +59,3 @@ private:
     void drawRectangleWithTexture(float x, float y, float width, float height, unsigned int texture, float alpha = 1.0f);
     void drawPerson(float x, float y);
 };
-
