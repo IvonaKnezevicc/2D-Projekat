@@ -382,7 +382,7 @@ void Cinema::createPeople() {
     float personStartY = personHeight / 2.0f;
     
     for (int i = 0; i < numPeople && i < availableSeats.size(); i++) {
-        int modelIndex = i % 11;
+        int modelIndex = i % 15;
         Person person(exitX, personStartY, exitZ, 0.03f, i * 8, modelIndex);
         person.setTarget(availableSeats[i], *this);
         people.push_back(person);
