@@ -1,4 +1,4 @@
-﻿#include "../Header/Renderer.h"
+#include "../Header/Renderer.h"
 #include "../Header/Cinema.h"
 #include "../Header/Util.h"
 #include <glm/glm.hpp>
@@ -9,35 +9,52 @@
 #include <vector>
 #include <cstdio>
 #include <limits>
+#include <fstream>
 
 Renderer::Renderer(int windowWidth, int windowHeight)
-    : windowWidth(windowWidth), windowHeight(windowHeight), studentInfoTexture(0)
+    : windowWidth(windowWidth), windowHeight(windowHeight), studentInfoTexture(0), seatTextureUpper(0), seatTextureBase(0)
 {
     setupShader();
     setupBuffers();
     
     studentInfoTexture = loadImageToTexture("Resources/student_info.png");
+    seatTextureUpper = loadImageToTexture("Resources/seat1.jpeg");
+    seatTextureBase = loadImageToTexture("Resources/seat2.png");
+    std::cout << "Seat teksture ucitane (upper/base): "
+              << (seatTextureUpper != 0 ? "DA" : "NE")
+              << "/"
+              << (seatTextureBase != 0 ? "DA" : "NE")
+              << std::endl;
     
     for (int i = 1; i <= 20; i++) {
         char path[256];
+        unsigned int texture = 0;
+        auto tryLoadIfExists = [&](const char* candidatePath) {
+            if (texture != 0) return;
+            std::ifstream f(candidatePath, std::ios::binary);
+            if (!f.good()) return;
+            f.close();
+            texture = loadImageToTexture(candidatePath);
+        };
+
         sprintf_s(path, "Resources/film_frame_%02d.jpg", i);
-        unsigned int texture = loadImageToTexture(path);
-        if (texture == 0) {
-            sprintf_s(path, "Resources/film_frame_%02d.png", i);
-            texture = loadImageToTexture(path);
-        }
-        if (texture == 0) {
-            sprintf_s(path, "Resources/film_frame_%d.jpg", i);
-            texture = loadImageToTexture(path);
-        }
-        if (texture == 0) {
-            sprintf_s(path, "Resources/film_frame_%d.png", i);
-            texture = loadImageToTexture(path);
-        }
+        tryLoadIfExists(path);
+        sprintf_s(path, "Resources/film_frame_%02d.jpeg", i);
+        tryLoadIfExists(path);
+        sprintf_s(path, "Resources/film_frame_%02d.png", i);
+        tryLoadIfExists(path);
+        sprintf_s(path, "Resources/film_frame_%d.jpg", i);
+        tryLoadIfExists(path);
+        sprintf_s(path, "Resources/film_frame_%d.jpeg", i);
+        tryLoadIfExists(path);
+        sprintf_s(path, "Resources/film_frame_%d.png", i);
+        tryLoadIfExists(path);
+
         if (texture != 0) {
             filmTextures.push_back(texture);
         }
     }
+    std::cout << "Ucitano film tekstura: " << filmTextures.size() << "/20" << std::endl;
     
     for (int i = 1; i <= 15; i++) {
         char objPath[256];
@@ -197,6 +214,12 @@ Renderer::~Renderer() {
     if (studentInfoTexture != 0) {
         glDeleteTextures(1, &studentInfoTexture);
     }
+    if (seatTextureUpper != 0) {
+        glDeleteTextures(1, &seatTextureUpper);
+    }
+    if (seatTextureBase != 0) {
+        glDeleteTextures(1, &seatTextureBase);
+    }
     
     for (auto& model : humanoidModels) {
         if (model.VAO != 0) {
@@ -295,8 +318,68 @@ void Renderer::render(const Cinema& cinema, const Camera& camera, int windowWidt
     GLint viewLoc = glGetUniformLocation(shaderProgram, "uView");
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
     
+    CinemaState state = cinema.getState();
+    bool isProjection = cinema.isFilmPlaying();
+    bool isHallClosed = (state == CinemaState::RESERVATION || state == CinemaState::RESETTING);
+    bool hallLightEnabled = !isHallClosed && !isProjection;
+    bool screenLightEnabled = isProjection;
+    bool useSceneLighting = hallLightEnabled || screenLightEnabled;
+
+    glm::vec3 hallLightPos(
+        0.0f,
+        cinema.getHallMaxY() - 1.35f,
+        (cinema.getHallMinZ() + cinema.getHallMaxZ()) * 0.5f
+    );
+    glm::vec3 hallLightColor(1.0f, 0.95f, 0.86f);
+    glm::vec3 screenLightPos(
+        cinema.getScreenX(),
+        cinema.getScreenY(),
+        cinema.getScreenZ() - 0.25f
+    );
+    glm::vec3 screenLightColor(0.42f, 0.42f, 0.40f);
+    float ambientStrength = 0.34f;
+    float specularStrength = 0.16f;
+    float shininess = 18.0f;
+
+    if (isProjection) {
+        ambientStrength = 0.02f;
+        specularStrength = 0.02f;
+        shininess = 10.0f;
+    }
+
     GLint useLightingLoc = glGetUniformLocation(shaderProgram, "uUseLighting");
-    glUniform1i(useLightingLoc, false);
+    glUniform1i(useLightingLoc, useSceneLighting ? 1 : 0);
+
+    GLint hallLightEnabledLoc = glGetUniformLocation(shaderProgram, "uHallLightEnabled");
+    glUniform1i(hallLightEnabledLoc, hallLightEnabled ? 1 : 0);
+
+    GLint screenLightEnabledLoc = glGetUniformLocation(shaderProgram, "uScreenLightEnabled");
+    glUniform1i(screenLightEnabledLoc, screenLightEnabled ? 1 : 0);
+
+    GLint hallLightPosLoc = glGetUniformLocation(shaderProgram, "uHallLightPos");
+    glUniform3fv(hallLightPosLoc, 1, glm::value_ptr(hallLightPos));
+
+    GLint hallLightColorLoc = glGetUniformLocation(shaderProgram, "uHallLightColor");
+    glUniform3fv(hallLightColorLoc, 1, glm::value_ptr(hallLightColor));
+
+    GLint screenLightPosLoc = glGetUniformLocation(shaderProgram, "uScreenLightPos");
+    glUniform3fv(screenLightPosLoc, 1, glm::value_ptr(screenLightPos));
+
+    GLint screenLightColorLoc = glGetUniformLocation(shaderProgram, "uScreenLightColor");
+    glUniform3fv(screenLightColorLoc, 1, glm::value_ptr(screenLightColor));
+
+    GLint viewPosLoc = glGetUniformLocation(shaderProgram, "uViewPos");
+    glm::vec3 cameraPos = camera.getPosition();
+    glUniform3fv(viewPosLoc, 1, glm::value_ptr(cameraPos));
+
+    GLint ambientLoc = glGetUniformLocation(shaderProgram, "uAmbientStrength");
+    glUniform1f(ambientLoc, ambientStrength);
+
+    GLint specularLoc = glGetUniformLocation(shaderProgram, "uSpecularStrength");
+    glUniform1f(specularLoc, specularStrength);
+
+    GLint shininessLoc = glGetUniformLocation(shaderProgram, "uShininess");
+    glUniform1f(shininessLoc, shininess);
     
     renderHall(cinema, view, projection);
     
@@ -313,7 +396,7 @@ void Renderer::render(const Cinema& cinema, const Camera& camera, int windowWidt
     }
     
     for (const auto& seat : cinema.getSeats()) {
-        renderSeat(seat, view, projection);
+        renderSeat(seat, view, projection, isProjection);
     }
     
     for (const auto& person : cinema.getPeople()) {
@@ -335,20 +418,28 @@ void Renderer::render(const Cinema& cinema, const Camera& camera, int windowWidt
     renderCrosshair();
 }
 
-void Renderer::renderSeat(const Seat& seat, const glm::mat4& view, const glm::mat4& projection) {
+void Renderer::renderSeat(const Seat& seat, const glm::mat4& view, const glm::mat4& projection, bool dimForProjection) {
     float r, g, b;
     
     switch (seat.status) {
         case SeatStatus::AVAILABLE:
-            r = 0.2f; g = 0.4f; b = 1.0f;
+            r = 0.10f; g = 0.20f; b = 0.42f;
             break;
         case SeatStatus::RESERVED:
-            r = 1.0f; g = 1.0f; b = 0.0f;
+            r = 0.40f; g = 0.36f; b = 0.10f;
             break;
         case SeatStatus::BOUGHT:
-            r = 1.0f; g = 0.0f; b = 0.0f;
+            r = 0.40f; g = 0.11f; b = 0.11f;
             break;
     }
+    const bool useSolidStatusColor = (seat.status == SeatStatus::RESERVED || seat.status == SeatStatus::BOUGHT);
+    const glm::vec3 statusColorBase = (seat.status == SeatStatus::RESERVED)
+        ? glm::vec3(0.93f, 0.82f, 0.26f)
+        : glm::vec3(0.88f, 0.22f, 0.22f);
+    const glm::vec3 statusColorUpper = (seat.status == SeatStatus::RESERVED)
+        ? glm::vec3(0.78f, 0.62f, 0.14f)
+        : glm::vec3(0.70f, 0.10f, 0.10f);
+    const float seatDim = dimForProjection ? 0.72f : 1.0f;
     
     const float seatWidth = 0.6f;
     const float seatDepth = 0.6f;
@@ -360,11 +451,23 @@ void Renderer::renderSeat(const Seat& seat, const glm::mat4& view, const glm::ma
     
     glm::vec3 basePos(seat.x, seat.y, seat.z);
     glm::vec3 baseSize(seatWidth, seatHeight, seatDepth);
-    drawCube(basePos, baseSize, glm::vec3(r, g, b), view, projection);
+    if (useSolidStatusColor) {
+        drawCube(basePos, baseSize, statusColorBase * seatDim, view, projection);
+    } else if (seatTextureBase != 0) {
+        drawCubeWithTexture(basePos, baseSize, seatTextureBase, glm::vec3(seatDim), view, projection);
+    } else {
+        drawCube(basePos, baseSize, glm::vec3(r, g, b) * seatDim, view, projection);
+    }
     
     glm::vec3 backPos(seat.x, seat.y + seatHeight * 0.5f + backHeight * 0.5f, seat.z - seatDepth * 0.45f);
     glm::vec3 backSize(seatWidth * 0.9f, backHeight, 0.1f);
-    drawCube(backPos, backSize, glm::vec3(r * 0.7f, g * 0.7f, b * 0.7f), view, projection);
+    if (useSolidStatusColor) {
+        drawCube(backPos, backSize, statusColorUpper * seatDim, view, projection);
+    } else if (seatTextureUpper != 0) {
+        drawCubeWithTexture(backPos, backSize, seatTextureUpper, glm::vec3(seatDim), view, projection);
+    } else {
+        drawCube(backPos, backSize, glm::vec3(r * 0.7f, g * 0.7f, b * 0.7f) * seatDim, view, projection);
+    }
 
     glm::vec3 leftArmPos(
         seat.x - seatWidth * 0.5f - armrestWidth * 0.5f,
@@ -378,8 +481,16 @@ void Renderer::renderSeat(const Seat& seat, const glm::mat4& view, const glm::ma
     );
     glm::vec3 armSize(armrestWidth, armrestHeight, armrestDepth);
     glm::vec3 armColor(r * 0.6f, g * 0.6f, b * 0.6f);
-    drawCube(leftArmPos, armSize, armColor, view, projection);
-    drawCube(rightArmPos, armSize, armColor, view, projection);
+    if (useSolidStatusColor) {
+        drawCube(leftArmPos, armSize, statusColorUpper * seatDim, view, projection);
+        drawCube(rightArmPos, armSize, statusColorUpper * seatDim, view, projection);
+    } else if (seatTextureUpper != 0) {
+        drawCubeWithTexture(leftArmPos, armSize, seatTextureUpper, glm::vec3(seatDim), view, projection);
+        drawCubeWithTexture(rightArmPos, armSize, seatTextureUpper, glm::vec3(seatDim), view, projection);
+    } else {
+        drawCube(leftArmPos, armSize, armColor * seatDim, view, projection);
+        drawCube(rightArmPos, armSize, armColor * seatDim, view, projection);
+    }
 }
 
 void Renderer::renderPerson(const Person& person, const glm::mat4& view, const glm::mat4& projection) {
@@ -444,13 +555,7 @@ void Renderer::renderModel(const Model& model, const glm::mat4& modelMatrix, con
     GLint alphaLoc = glGetUniformLocation(shaderProgram, "uAlpha");
     glUniform1f(alphaLoc, 1.0f);
     
-    GLint useLightingLoc = glGetUniformLocation(shaderProgram, "uUseLighting");
-    glUniform1i(useLightingLoc, 0);
-    
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LESS);
     glDepthMask(GL_TRUE);
-    glDisable(GL_CULL_FACE);
     
     GLboolean wasBlendEnabled = glIsEnabled(GL_BLEND);
     glDisable(GL_BLEND);
@@ -517,18 +622,12 @@ void Renderer::renderDoor(float x, float y, float z, bool isOpen, float angle, c
     glDepthMask(GL_TRUE);
 
     glUseProgram(shaderProgram);
-    GLint useLightingLoc = glGetUniformLocation(shaderProgram, "uUseLighting");
-    glUniform1i(useLightingLoc, 0);
 
     float doorWidth = 1.5f;
     float doorHeight = 2.5f;
-    float doorDepth = 0.1f;
+    float doorDepth = 0.06f;
     
-    float doorZ = z - 0.01f;
-
-    glm::vec3 framePos(x, y, doorZ);
-    glm::vec3 frameSize(0.2f, doorHeight + 0.2f, doorDepth);
-    drawCube(framePos, frameSize, glm::vec3(0.3f, 0.3f, 0.3f), view, projection);
+    float doorZ = z - 0.08f;
 
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, glm::vec3(x, y, doorZ));
@@ -542,7 +641,7 @@ void Renderer::renderDoor(float x, float y, float z, bool isOpen, float angle, c
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
     GLint colorLoc = glGetUniformLocation(shaderProgram, "uColor");
-    glUniform4f(colorLoc, 0.0f, 1.0f, 0.0f, 1.0f);
+    glUniform4f(colorLoc, 0.10f, 0.28f, 0.12f, 1.0f);
 
     GLint useTexLoc = glGetUniformLocation(shaderProgram, "uUseTexture");
     glUniform1i(useTexLoc, 0);
@@ -577,6 +676,8 @@ void Renderer::renderOverlay() {
 void Renderer::renderStudentInfo() {
     glUseProgram(shaderProgram);
 
+    GLboolean wasDepthEnabled = glIsEnabled(GL_DEPTH_TEST);
+
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -607,7 +708,11 @@ void Renderer::renderStudentInfo() {
         drawRectangleWithTexture(cx, cy, infoW, infoH, studentInfoTexture, 0.85f);
     }
 
-    glEnable(GL_DEPTH_TEST);
+    if (wasDepthEnabled) {
+        glEnable(GL_DEPTH_TEST);
+    } else {
+        glDisable(GL_DEPTH_TEST);
+    }
     glDisable(GL_BLEND);
 }
 
@@ -669,6 +774,8 @@ void Renderer::drawRectangleWithTexture(float x, float y, float width, float hei
 }
 
 void Renderer::renderCrosshair() {
+    GLboolean wasDepthEnabled = glIsEnabled(GL_DEPTH_TEST);
+
     glDisable(GL_DEPTH_TEST);
     glUseProgram(shaderProgram);
     
@@ -712,7 +819,11 @@ void Renderer::renderCrosshair() {
     glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
     
     glBindVertexArray(0);
-    glEnable(GL_DEPTH_TEST);
+    if (wasDepthEnabled) {
+        glEnable(GL_DEPTH_TEST);
+    } else {
+        glDisable(GL_DEPTH_TEST);
+    }
 }
 
 void Renderer::drawPerson(float x, float y) {
@@ -751,7 +862,50 @@ void Renderer::drawCube(glm::vec3 position, glm::vec3 size, glm::vec3 color,
     glBindVertexArray(0);
 }
 
+void Renderer::drawCubeWithTexture(glm::vec3 position, glm::vec3 size, unsigned int texture, const glm::vec3& tint,
+                                   const glm::mat4& view, const glm::mat4& projection) {
+    glUseProgram(shaderProgram);
+
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::translate(model, position);
+    model = glm::scale(model, size);
+
+    GLint modelLoc = glGetUniformLocation(shaderProgram, "uModel");
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+
+    GLint colorLoc = glGetUniformLocation(shaderProgram, "uColor");
+    glUniform4f(colorLoc, tint.r, tint.g, tint.b, 1.0f);
+
+    GLint useTexLoc = glGetUniformLocation(shaderProgram, "uUseTexture");
+    glUniform1i(useTexLoc, 1);
+
+    GLint alphaLoc = glGetUniformLocation(shaderProgram, "uAlpha");
+    glUniform1f(alphaLoc, 1.0f);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+    GLboolean wasBlendEnabled = glIsEnabled(GL_BLEND);
+    glDisable(GL_BLEND);
+
+    glBindVertexArray(VAO);
+    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    if (wasBlendEnabled) {
+        glEnable(GL_BLEND);
+    }
+}
+
 void Renderer::renderHall(const Cinema& cinema, const glm::mat4& view, const glm::mat4& projection) {
+    const glm::vec3 wallColor(0.34f, 0.34f, 0.34f);
+    const glm::vec3 ceilingColor(0.02f, 0.02f, 0.02f);
+
     float seatStartZ = cinema.getHallMaxZ() - 2.0f;
     float seatEndZ = seatStartZ - 9.0f * 1.0f;
     
@@ -809,7 +963,39 @@ void Renderer::renderHall(const Cinema& cinema, const glm::mat4& view, const glm
         0.1f,
         cinema.getHallMaxZ() - cinema.getHallMinZ()
     );
-    drawCube(ceilingPos, ceilingSize, glm::vec3(0.15f, 0.15f, 0.15f), view, projection);
+    drawCube(ceilingPos, ceilingSize, ceilingColor, view, projection);
+
+    {
+        float hallWidth = cinema.getHallMaxX() - cinema.getHallMinX();
+        float hallDepth = cinema.getHallMaxZ() - cinema.getHallMinZ();
+        float yGrid = cinema.getHallMaxY() - 0.045f;
+        float lineThickness = 0.02f;
+        int xDiv = 8;
+        int zDiv = 8;
+        glm::vec3 gridColor(0.16f, 0.16f, 0.16f);
+
+        for (int i = 1; i < xDiv; i++) {
+            float x = cinema.getHallMinX() + (hallWidth * i) / (float)xDiv;
+            drawCube(
+                glm::vec3(x, yGrid, (cinema.getHallMinZ() + cinema.getHallMaxZ()) * 0.5f),
+                glm::vec3(lineThickness, 0.012f, hallDepth),
+                gridColor,
+                view,
+                projection
+            );
+        }
+
+        for (int i = 1; i < zDiv; i++) {
+            float z = cinema.getHallMinZ() + (hallDepth * i) / (float)zDiv;
+            drawCube(
+                glm::vec3((cinema.getHallMinX() + cinema.getHallMaxX()) * 0.5f, yGrid, z),
+                glm::vec3(hallWidth, 0.012f, lineThickness),
+                gridColor,
+                view,
+                projection
+            );
+        }
+    }
 
     glm::vec3 leftWallPos(
         cinema.getHallMinX(),
@@ -821,7 +1007,7 @@ void Renderer::renderHall(const Cinema& cinema, const glm::mat4& view, const glm
         cinema.getHallMaxY(),
         cinema.getHallMaxZ() - cinema.getHallMinZ()
     );
-    drawCube(leftWallPos, leftWallSize, glm::vec3(0.25f, 0.25f, 0.25f), view, projection);
+    drawCube(leftWallPos, leftWallSize, wallColor, view, projection);
 
     glm::vec3 rightWallPos(
         cinema.getHallMaxX(),
@@ -833,7 +1019,7 @@ void Renderer::renderHall(const Cinema& cinema, const glm::mat4& view, const glm
         cinema.getHallMaxY(),
         cinema.getHallMaxZ() - cinema.getHallMinZ()
     );
-    drawCube(rightWallPos, rightWallSize, glm::vec3(0.25f, 0.25f, 0.25f), view, projection);
+    drawCube(rightWallPos, rightWallSize, wallColor, view, projection);
 
     float wallTopHeight =
         cinema.getHallMaxY() - (cinema.getScreenY() + cinema.getScreenHeight() / 2.0f);
@@ -848,7 +1034,7 @@ void Renderer::renderHall(const Cinema& cinema, const glm::mat4& view, const glm
             wallTopHeight,
             0.1f
         );
-        drawCube(backWallTopPos, backWallTopSize, glm::vec3(0.25f, 0.25f, 0.25f), view, projection);
+        drawCube(backWallTopPos, backWallTopSize, wallColor, view, projection);
     }
 
     float wallBottomHeight =
@@ -864,7 +1050,7 @@ void Renderer::renderHall(const Cinema& cinema, const glm::mat4& view, const glm
             wallBottomHeight,
             0.1f
         );
-        drawCube(backWallBottomPos, backWallBottomSize, glm::vec3(0.25f, 0.25f, 0.25f), view, projection);
+        drawCube(backWallBottomPos, backWallBottomSize, wallColor, view, projection);
     }
 
     if (cinema.getScreenX() - cinema.getScreenWidth() / 2.0f > cinema.getHallMinX()) {
@@ -878,7 +1064,7 @@ void Renderer::renderHall(const Cinema& cinema, const glm::mat4& view, const glm
             cinema.getScreenHeight(),
             0.1f
         );
-        drawCube(backWallLeftPos, backWallLeftSize, glm::vec3(0.25f, 0.25f, 0.25f), view, projection);
+        drawCube(backWallLeftPos, backWallLeftSize, wallColor, view, projection);
     }
 
     if (cinema.getScreenX() + cinema.getScreenWidth() / 2.0f < cinema.getHallMaxX()) {
@@ -892,7 +1078,7 @@ void Renderer::renderHall(const Cinema& cinema, const glm::mat4& view, const glm
             cinema.getScreenHeight(),
             0.1f
         );
-        drawCube(backWallRightPos, backWallRightSize, glm::vec3(0.25f, 0.25f, 0.25f), view, projection);
+        drawCube(backWallRightPos, backWallRightSize, wallColor, view, projection);
     }
     
     glm::vec3 frontWallPos(
@@ -905,7 +1091,7 @@ void Renderer::renderHall(const Cinema& cinema, const glm::mat4& view, const glm
         cinema.getHallMaxY(),
         0.1f
     );
-    drawCube(frontWallPos, frontWallSize, glm::vec3(0.0f, 0.0f, 0.0f), view, projection);
+    drawCube(frontWallPos, frontWallSize, wallColor, view, projection);
     
     renderStairs(cinema, view, projection);
 }

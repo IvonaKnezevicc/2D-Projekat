@@ -28,7 +28,7 @@ Cinema::Cinema(int windowWidth, int windowHeight)
     screenX = 0.0f;
     screenWidth = hallWidth * 0.6f;
     screenHeight = hallHeight * 0.6f;
-    screenY = hallHeight - screenHeight / 2.0f - 0.08f;
+    screenY = hallHeight - screenHeight / 2.0f - 0.36f;
     screenZ = hallMaxZ;
     screenDepth = 0.1f;
     
@@ -39,16 +39,15 @@ Cinema::Cinema(int windowWidth, int windowHeight)
     doorY = doorHeight / 2.0f;
     doorZ = hallMaxZ;
     
-    portalX = doorX - doorWidth - 0.5f;
+    portalX = doorX + doorWidth * 0.5f;
     portalY = doorY;
-    portalZ = doorZ;
+    portalZ = doorZ - 0.06f;
     
-    float personHeight = 1.0f;
-    float personStartY = personHeight / 2.0f;
+    float personStartY = 0.25f;
     
-    exitX = doorX - 0.02f;
+    exitX = portalX;
     exitY = personStartY;
-    exitZ = doorZ - 0.25f;
+    exitZ = portalZ;
     
     initializeSeats();
 }
@@ -160,15 +159,21 @@ void Cinema::update() {
             
         case CinemaState::PEOPLE_EXITING:
             {
-                bool allExited = true;
                 for (auto& person : people) {
                     person.update();
-                    if (person.isMoving || !person.isExiting || person.currentFrame < person.delayFrames) {
-                        allExited = false;
-                    }
                 }
-                
-                if (allExited) {
+
+                people.erase(
+                    std::remove_if(people.begin(), people.end(),
+                        [&](const Person& person) {
+                            return person.isExiting &&
+                                   !person.isMoving &&
+                                   person.currentFrame >= person.delayFrames;
+                        }),
+                    people.end()
+                );
+
+                if (people.empty()) {
                     doorOpen = false;
                     state = CinemaState::RESETTING;
                 }
@@ -378,8 +383,7 @@ void Cinema::createPeople() {
     
     std::shuffle(availableSeats.begin(), availableSeats.end(), rng);
     
-    float personHeight = 1.0f;
-    float personStartY = personHeight / 2.0f;
+    float personStartY = 0.25f;
     
     for (int i = 0; i < numPeople && i < availableSeats.size(); i++) {
         int modelIndex = i % 15;

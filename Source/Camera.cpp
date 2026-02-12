@@ -30,8 +30,36 @@ void Camera::processKeyboard(int direction, float deltaTime) {
     }
     
     if (boundsSet) {
+        float dynamicMinY = minBounds.y;
+
+        const int numRows = 10;
+        const float seatHeight = 0.4f;
+        const float stepHeight = 0.22f;
+        const float startY = seatHeight * 0.5f + 0.05f;
+        const float startZ = maxBounds.z - 1.5f;
+        const float rowSpacing = 1.0f;
+        const float stairDepth = 1.0f;
+
+        for (int row = 0; row < numRows; row++) {
+            float rowCenterZ = startZ - row * rowSpacing;
+            float rowMinZ = rowCenterZ - stairDepth * 0.5f;
+            float rowMaxZ = rowCenterZ + stairDepth * 0.5f;
+            if (newPosition.z >= rowMinZ && newPosition.z <= rowMaxZ) {
+                float stairTopY = (startY + row * stepHeight) + stepHeight * 0.5f;
+                dynamicMinY = std::max(dynamicMinY, stairTopY + 0.05f);
+                break;
+            }
+        }
+
+        float lastRowCenterZ = startZ - (numRows - 1) * rowSpacing;
+        float lastRowBackEdgeZ = lastRowCenterZ - stairDepth * 0.5f;
+        if (newPosition.z < lastRowBackEdgeZ) {
+            float lastStairTopY = (startY + (numRows - 1) * stepHeight) + stepHeight * 0.5f;
+            dynamicMinY = std::max(dynamicMinY, lastStairTopY + 0.05f);
+        }
+
         newPosition.x = std::max(minBounds.x, std::min(maxBounds.x, newPosition.x));
-        newPosition.y = std::max(minBounds.y, std::min(maxBounds.y, newPosition.y));
+        newPosition.y = std::max(dynamicMinY, std::min(maxBounds.y, newPosition.y));
         newPosition.z = std::max(minBounds.z, std::min(maxBounds.z, newPosition.z));
     }
     

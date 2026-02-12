@@ -10,8 +10,9 @@ namespace {
     constexpr float STAIR_STEP_HEIGHT = 0.22f;
 
     float getStairContactY(float z, float fallbackY) {
+        (void)fallbackY;
         if (z > STAIR_FIRST_ROW_AISLE_Z) {
-            return fallbackY;
+            return STAIR_BASE_Y;
         }
 
         float progress = (STAIR_FIRST_ROW_AISLE_Z - z) / STAIR_ROW_SPACING_Z;

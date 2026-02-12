@@ -72,29 +72,33 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
             depthTestEnabled = !depthTestEnabled;
             if (depthTestEnabled) {
                 glEnable(GL_DEPTH_TEST);
-                if (faceCullingEnabled) {
-                    glDisable(GL_CULL_FACE);
-                    faceCullingEnabled = false;
-                }
-                std::cout << "Depth testing: ON (face culling automatski isključen)" << std::endl;
+                glDepthFunc(GL_LESS);
+                glDisable(GL_CULL_FACE);
+                std::cout << "Depth testing: ON" << std::endl;
             } else {
                 glDisable(GL_DEPTH_TEST);
-                std::cout << "Depth testing: OFF" << std::endl;
-            }
-        } else if (key == GLFW_KEY_C) {
-            if (depthTestEnabled) {
-                std::cout << "Face culling ne može biti uključen dok je depth testing ON (specifikacija)" << std::endl;
-            } else {
-                faceCullingEnabled = !faceCullingEnabled;
                 if (faceCullingEnabled) {
                     glEnable(GL_CULL_FACE);
                     glCullFace(GL_BACK);
                     glFrontFace(GL_CCW);
-                    std::cout << "Face culling: ON" << std::endl;
                 } else {
                     glDisable(GL_CULL_FACE);
-                    std::cout << "Face culling: OFF" << std::endl;
                 }
+                std::cout << "Depth testing: OFF" << std::endl;
+            }
+        } else if (key == GLFW_KEY_C) {
+            faceCullingEnabled = !faceCullingEnabled;
+            if (depthTestEnabled) {
+                glDisable(GL_CULL_FACE);
+                std::cout << "Face culling toggled, ali nema efekat dok je depth testing ON" << std::endl;
+            } else if (faceCullingEnabled) {
+                glEnable(GL_CULL_FACE);
+                glCullFace(GL_BACK);
+                glFrontFace(GL_CCW);
+                std::cout << "Face culling: ON" << std::endl;
+            } else {
+                glDisable(GL_CULL_FACE);
+                std::cout << "Face culling: OFF" << std::endl;
             }
         } else if (g_cinema) {
             g_cinema->handleKeyPress(key);
@@ -145,8 +149,8 @@ int main()
     
     glm::vec3 startCameraPos(
         cinema.getHallMaxX() - 1.0f,
-        cinema.getHallMaxY() - 1.0f,
-        cinema.getHallMinZ() + 1.0f
+        cinema.getHallMaxY() - 0.8f,
+        cinema.getHallMaxZ() - 1.0f
     );
     Camera camera(
         startCameraPos,
