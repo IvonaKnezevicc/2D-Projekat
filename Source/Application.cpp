@@ -123,9 +123,16 @@ void Application::mouseButtonCallback(GLFWwindow* window, int button, int action
     if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
         double xpos, ypos;
         glfwGetCursorPos(window, &xpos, &ypos);
+
+        int fbWidth = 0;
+        int fbHeight = 0;
+        glfwGetFramebufferSize(window, &fbWidth, &fbHeight);
+        if (fbWidth <= 0 || fbHeight <= 0) {
+            return;
+        }
         
         glm::mat4 view = app->camera->getViewMatrix();
-        float aspect = (float)app->renderer->getWindowWidth() / (float)app->renderer->getWindowHeight();
+        float aspect = (float)fbWidth / (float)fbHeight;
         glm::mat4 projection = glm::perspective(glm::radians(app->camera->getFOV()), aspect, 0.1f, 100.0f);
         
         app->cinema->handleMouseClick(xpos, ypos, view, projection, app->camera->getPosition());
@@ -199,7 +206,7 @@ void Application::run() {
     float lastFrame = 0.0f;
     
     int windowWidth, windowHeight;
-    glfwGetWindowSize(window, &windowWidth, &windowHeight);
+    glfwGetFramebufferSize(window, &windowWidth, &windowHeight);
     
     while (!glfwWindowShouldClose(window)) {
         float currentFrame = glfwGetTime();
@@ -227,7 +234,7 @@ void Application::run() {
             
             cinema->update();
             
-            glfwGetWindowSize(window, &windowWidth, &windowHeight);
+            glfwGetFramebufferSize(window, &windowWidth, &windowHeight);
             renderer->render(*cinema, *camera, windowWidth, windowHeight);
             
             glfwSwapBuffers(window);

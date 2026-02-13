@@ -309,6 +309,13 @@ void Renderer::setupBuffers() {
 }
 
 void Renderer::render(const Cinema& cinema, const Camera& camera, int windowWidth, int windowHeight) {
+    this->windowWidth = windowWidth;
+    this->windowHeight = windowHeight;
+    if (windowWidth <= 0 || windowHeight <= 0) {
+        return;
+    }
+
+    glViewport(0, 0, windowWidth, windowHeight);
     glUseProgram(shaderProgram);
     
     float aspect = (float)windowWidth / (float)windowHeight;
@@ -679,6 +686,10 @@ void Renderer::renderPortal(float x, float y, float z, const glm::mat4& view, co
 }
 
 void Renderer::renderOverlay() {
+    if (windowWidth <= 0 || windowHeight <= 0) {
+        return;
+    }
+
     float aspect = (float)windowWidth / (float)windowHeight;
     float overlayWidth = 2.0f * aspect;
     float overlayHeight = 2.0f;
@@ -686,6 +697,10 @@ void Renderer::renderOverlay() {
 }
 
 void Renderer::renderStudentInfo() {
+    if (windowWidth <= 0 || windowHeight <= 0) {
+        return;
+    }
+
     glUseProgram(shaderProgram);
 
     GLboolean wasDepthEnabled = glIsEnabled(GL_DEPTH_TEST);
@@ -786,6 +801,10 @@ void Renderer::drawRectangleWithTexture(float x, float y, float width, float hei
 }
 
 void Renderer::renderCrosshair() {
+    if (windowWidth <= 0 || windowHeight <= 0) {
+        return;
+    }
+
     GLboolean wasDepthEnabled = glIsEnabled(GL_DEPTH_TEST);
 
     glDisable(GL_DEPTH_TEST);
