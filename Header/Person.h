@@ -4,9 +4,9 @@
 class Cinema;
 
 struct Person {
-    float x, y, z;  // Dodata z koordinata za 3D
-    float targetX, targetY, targetZ;  // Dodata targetZ za 3D
-    float intermediateX, intermediateY, intermediateZ;  // Dodata intermediateZ za 3D
+    float x, y, z;  
+    float targetX, targetY, targetZ;  
+    float intermediateX, intermediateY, intermediateZ;  
     float speed;
     bool isMoving;
     bool isSeated;

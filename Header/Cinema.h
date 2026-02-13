@@ -48,7 +48,7 @@ public:
     float getScreenHeight() const { return screenHeight; }
     float getScreenDepth() const { return screenDepth; }
     
-    // Getteri za dimenzije sale
+    
     float getHallMinX() const { return hallMinX; }
     float getHallMaxX() const { return hallMaxX; }
     float getHallMinY() const { return hallMinY; }
@@ -79,7 +79,7 @@ private:
     float screenX, screenY, screenZ, screenWidth, screenHeight, screenDepth;
     float exitX, exitY, exitZ;
     
-    // Dimenzije sale u 3D prostoru
+    
     float hallWidth, hallHeight, hallDepth;
     float hallMinX, hallMaxX, hallMinY, hallMaxY, hallMinZ, hallMaxZ;
     

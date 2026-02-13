@@ -73,25 +73,14 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
             if (depthTestEnabled) {
                 glEnable(GL_DEPTH_TEST);
                 glDepthFunc(GL_LESS);
-                glDisable(GL_CULL_FACE);
                 std::cout << "Depth testing: ON" << std::endl;
             } else {
                 glDisable(GL_DEPTH_TEST);
-                if (faceCullingEnabled) {
-                    glEnable(GL_CULL_FACE);
-                    glCullFace(GL_BACK);
-                    glFrontFace(GL_CCW);
-                } else {
-                    glDisable(GL_CULL_FACE);
-                }
                 std::cout << "Depth testing: OFF" << std::endl;
             }
         } else if (key == GLFW_KEY_C) {
             faceCullingEnabled = !faceCullingEnabled;
-            if (depthTestEnabled) {
-                glDisable(GL_CULL_FACE);
-                std::cout << "Face culling toggled, ali nema efekat dok je depth testing ON" << std::endl;
-            } else if (faceCullingEnabled) {
+            if (faceCullingEnabled) {
                 glEnable(GL_CULL_FACE);
                 glCullFace(GL_BACK);
                 glFrontFace(GL_CCW);

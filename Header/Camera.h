@@ -20,7 +20,7 @@ public:
     
     void setPosition(glm::vec3 pos) { position = pos; }
     
-    // Granice sale za ograničenje kretanja kamere
+    
     void setBounds(glm::vec3 minBounds, glm::vec3 maxBounds);
     
 private:

@@ -7,7 +7,7 @@ enum class SeatStatus {
 };
 
 struct Seat {
-    float x, y, z;  // 3D pozicija
+    float x, y, z;  
     SeatStatus status;
     int row, col;
     

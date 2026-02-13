@@ -274,11 +274,11 @@ void Renderer::setupBuffers() {
     
     unsigned int indices[] = {
         0,  1,  2,   2,  3,  0,
-        4,  5,  6,   6,  7,  4,
+        4,  7,  6,   6,  5,  4,
         8,  9,  10,  10, 11, 8,
-        12, 13, 14,  14, 15, 12,
+        12, 15, 14,  14, 13, 12,
         16, 17, 18,  18, 19, 16,
-        20, 21, 22,  22, 23, 20
+        20, 22, 21,  22, 20, 23
     };
     
     glGenVertexArrays(1, &VAO);
@@ -556,6 +556,10 @@ void Renderer::renderModel(const Model& model, const glm::mat4& modelMatrix, con
     glUniform1f(alphaLoc, 1.0f);
     
     glDepthMask(GL_TRUE);
+    GLboolean wasCullEnabled = glIsEnabled(GL_CULL_FACE);
+    if (wasCullEnabled) {
+        glDisable(GL_CULL_FACE);
+    }
     
     GLboolean wasBlendEnabled = glIsEnabled(GL_BLEND);
     glDisable(GL_BLEND);
@@ -566,6 +570,9 @@ void Renderer::renderModel(const Model& model, const glm::mat4& modelMatrix, con
     
     if (wasBlendEnabled) {
         glEnable(GL_BLEND);
+    }
+    if (wasCullEnabled) {
+        glEnable(GL_CULL_FACE);
     }
 
     if (model.hasTexture && model.texture != 0) {
