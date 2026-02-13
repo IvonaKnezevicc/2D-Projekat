@@ -124,6 +124,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Application.cpp" />
     <ClCompile Include="Source\Main.cpp" />
     <ClCompile Include="Source\Util.cpp" />
     <ClCompile Include="Source\Cinema.cpp" />
@@ -133,6 +134,8 @@
     <ClCompile Include="Source\Camera.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Header\Application.h" />
+    <ClInclude Include="Header\Model.h" />
     <ClInclude Include="Header\stb_image.h" />
     <ClInclude Include="Header\Util.h" />
     <ClInclude Include="Header\Seat.h" />

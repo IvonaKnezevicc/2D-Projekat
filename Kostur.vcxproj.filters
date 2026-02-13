@@ -15,6 +15,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Application.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -33,8 +36,17 @@
     <ClCompile Include="Source\Seat.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Camera.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Header\Application.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\Model.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="Header\stb_image.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -51,6 +63,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Header\Renderer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Header\Camera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

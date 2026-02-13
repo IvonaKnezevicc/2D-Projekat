@@ -1,5 +1,8 @@
 #include "../Header/Renderer.h"
 #include "../Header/Cinema.h"
+#include "../Header/Seat.h"
+#include "../Header/Person.h"
+#include "../Header/Camera.h"
 #include "../Header/Util.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
