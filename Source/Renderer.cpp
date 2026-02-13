@@ -311,12 +311,26 @@ void Renderer::render(const Cinema& cinema, const Camera& camera, int windowWidt
     float aspect = (float)windowWidth / (float)windowHeight;
     glm::mat4 projection = glm::perspective(glm::radians(camera.getFOV()), aspect, 0.1f, 100.0f);
     glm::mat4 view = camera.getViewMatrix();
-    
-    GLint projLoc = glGetUniformLocation(shaderProgram, "uProjection");
-    glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
-    
-    GLint viewLoc = glGetUniformLocation(shaderProgram, "uView");
-    glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+
+    auto setMat4 = [&](const char* name, const glm::mat4& value) {
+        GLint loc = glGetUniformLocation(shaderProgram, name);
+        glUniformMatrix4fv(loc, 1, GL_FALSE, glm::value_ptr(value));
+    };
+    auto setVec3 = [&](const char* name, const glm::vec3& value) {
+        GLint loc = glGetUniformLocation(shaderProgram, name);
+        glUniform3fv(loc, 1, glm::value_ptr(value));
+    };
+    auto setFloat = [&](const char* name, float value) {
+        GLint loc = glGetUniformLocation(shaderProgram, name);
+        glUniform1f(loc, value);
+    };
+    auto setBool = [&](const char* name, bool value) {
+        GLint loc = glGetUniformLocation(shaderProgram, name);
+        glUniform1i(loc, value ? 1 : 0);
+    };
+
+    setMat4("uProjection", projection);
+    setMat4("uView", view);
     
     CinemaState state = cinema.getState();
     bool isProjection = cinema.isFilmPlaying();
@@ -347,39 +361,17 @@ void Renderer::render(const Cinema& cinema, const Camera& camera, int windowWidt
         shininess = 10.0f;
     }
 
-    GLint useLightingLoc = glGetUniformLocation(shaderProgram, "uUseLighting");
-    glUniform1i(useLightingLoc, useSceneLighting ? 1 : 0);
-
-    GLint hallLightEnabledLoc = glGetUniformLocation(shaderProgram, "uHallLightEnabled");
-    glUniform1i(hallLightEnabledLoc, hallLightEnabled ? 1 : 0);
-
-    GLint screenLightEnabledLoc = glGetUniformLocation(shaderProgram, "uScreenLightEnabled");
-    glUniform1i(screenLightEnabledLoc, screenLightEnabled ? 1 : 0);
-
-    GLint hallLightPosLoc = glGetUniformLocation(shaderProgram, "uHallLightPos");
-    glUniform3fv(hallLightPosLoc, 1, glm::value_ptr(hallLightPos));
-
-    GLint hallLightColorLoc = glGetUniformLocation(shaderProgram, "uHallLightColor");
-    glUniform3fv(hallLightColorLoc, 1, glm::value_ptr(hallLightColor));
-
-    GLint screenLightPosLoc = glGetUniformLocation(shaderProgram, "uScreenLightPos");
-    glUniform3fv(screenLightPosLoc, 1, glm::value_ptr(screenLightPos));
-
-    GLint screenLightColorLoc = glGetUniformLocation(shaderProgram, "uScreenLightColor");
-    glUniform3fv(screenLightColorLoc, 1, glm::value_ptr(screenLightColor));
-
-    GLint viewPosLoc = glGetUniformLocation(shaderProgram, "uViewPos");
-    glm::vec3 cameraPos = camera.getPosition();
-    glUniform3fv(viewPosLoc, 1, glm::value_ptr(cameraPos));
-
-    GLint ambientLoc = glGetUniformLocation(shaderProgram, "uAmbientStrength");
-    glUniform1f(ambientLoc, ambientStrength);
-
-    GLint specularLoc = glGetUniformLocation(shaderProgram, "uSpecularStrength");
-    glUniform1f(specularLoc, specularStrength);
-
-    GLint shininessLoc = glGetUniformLocation(shaderProgram, "uShininess");
-    glUniform1f(shininessLoc, shininess);
+    setBool("uUseLighting", useSceneLighting);
+    setBool("uHallLightEnabled", hallLightEnabled);
+    setBool("uScreenLightEnabled", screenLightEnabled);
+    setVec3("uHallLightPos", hallLightPos);
+    setVec3("uHallLightColor", hallLightColor);
+    setVec3("uScreenLightPos", screenLightPos);
+    setVec3("uScreenLightColor", screenLightColor);
+    setVec3("uViewPos", camera.getPosition());
+    setFloat("uAmbientStrength", ambientStrength);
+    setFloat("uSpecularStrength", specularStrength);
+    setFloat("uShininess", shininess);
     
     renderHall(cinema, view, projection);
     
@@ -498,11 +490,21 @@ void Renderer::renderPerson(const Person& person, const glm::mat4& view, const g
         int safeIndex = person.modelIndex % (int)humanoidModels.size();
         if (safeIndex < 0) safeIndex += (int)humanoidModels.size();
 
-        float yawDegrees = 180.0f;
+        float yawDegrees = 0.0f;
         if (person.isSeated) {
             yawDegrees = 0.0f;
-        } else if (person.isExiting) {
-            yawDegrees = 0.0f;
+        } else {
+            float targetX = person.reachedIntermediate ? person.targetX : person.intermediateX;
+            float targetZ = person.reachedIntermediate ? person.targetZ : person.intermediateZ;
+            float dirX = targetX - person.x;
+            float dirZ = targetZ - person.z;
+            float dirLenSq = dirX * dirX + dirZ * dirZ;
+
+            if (dirLenSq > 0.0001f) {
+                yawDegrees = glm::degrees(std::atan2(dirX, dirZ));
+            } else {
+                yawDegrees = person.isExiting ? 0.0f : 180.0f;
+            }
         }
 
         const Model& selectedModel = humanoidModels[safeIndex];

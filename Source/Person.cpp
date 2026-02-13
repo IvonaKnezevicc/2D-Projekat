@@ -32,7 +32,7 @@ namespace {
 
 Person::Person(float startX, float startY, float startZ, float speed, int delayFrames, int modelIndex)
     : x(startX), y(startY), z(startZ), targetX(0), targetY(0), targetZ(0), intermediateX(0), intermediateY(0), intermediateZ(0), speed(speed),
-      isMoving(false), isSeated(false), isExiting(false), reachedIntermediate(false), assignedSeat(nullptr),
+      isMoving(false), isSeated(false), isExiting(false), reachedIntermediate(false), useRightEntryNudge(false), rightEntryTargetZ(0.0f), assignedSeat(nullptr),
       delayFrames(delayFrames), currentFrame(0), modelIndex(modelIndex) {}
 
 void Person::setTarget(Seat* seat, const Cinema& cinema) {
@@ -47,6 +47,8 @@ void Person::setTarget(Seat* seat, const Cinema& cinema) {
         targetZ = seat->z;
         
         bool useLeftStair = seat->x < 0.0f;
+        useRightEntryNudge = !useLeftStair;
+        rightEntryTargetZ = z - 0.25f;
         intermediateX = cinema.getStairX(useLeftStair);
         intermediateY = seat->y;
         intermediateZ = cinema.getStairZ(seat->row) + aisleOffsetZ;
@@ -125,8 +127,11 @@ void Person::update() {
             float dx = intermediateX - x;
             float dy = intermediateY - y;
             float dz = intermediateZ - z;
-            
-            if (fabs(dx) > 0.01f) {
+
+            if (useRightEntryNudge && z > rightEntryTargetZ + 0.01f) {
+                z -= speed;
+                if (z < rightEntryTargetZ) z = rightEntryTargetZ;
+            } else if (fabs(dx) > 0.01f) {
                 if (dx > 0) x += speed;
                 else x -= speed;
                 if (fabs(dx) < speed * 2) x = intermediateX;

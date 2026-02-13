@@ -12,6 +12,8 @@ struct Person {
     bool isSeated;
     bool isExiting;
     bool reachedIntermediate;
+    bool useRightEntryNudge;
+    float rightEntryTargetZ;
     Seat* assignedSeat;
     int delayFrames;
     int currentFrame;

@@ -426,7 +426,7 @@ float Cinema::getStairX(bool isLeft) const {
     if (isLeft) {
         return hallMinX + 1.0f;
     } else {
-        return hallMaxX - 1.0f;
+        return hallMaxX - 1.6f;
     }
 }
 
